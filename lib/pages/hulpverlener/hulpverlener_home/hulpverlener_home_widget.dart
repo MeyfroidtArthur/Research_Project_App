@@ -164,8 +164,8 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
                                     queryBuilder: (teamsRecord) => teamsRecord
                                         .where(
                                           'Status',
-                                          isNotEqualTo:
-                                              TeamStatus.Available.serialize(),
+                                          isEqualTo: TeamStatus.Unavailable
+                                              .serialize(),
                                         )
                                         .where(
                                           'EventId',

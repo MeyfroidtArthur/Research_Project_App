@@ -20,6 +20,7 @@ enum Uitgecheckt {
 enum TeamStatus {
   Available,
   Unavailable,
+  OnDuty,
 }
 
 extension FFEnumExtensions<T extends Enum> on T {

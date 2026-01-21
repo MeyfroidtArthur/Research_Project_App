@@ -1,20 +1,6 @@
 {
   "indexes": [
     {
-      "collectionGroup": "Teams",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "EventId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "Status",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "Interventie",
       "queryScope": "COLLECTION",
       "fields": [

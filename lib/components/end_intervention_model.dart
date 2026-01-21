@@ -18,11 +18,11 @@ class EndInterventionModel extends FlutterFlowModel<EndInterventionWidget> {
   // State field(s) for DropDown widget.
   String? dropDownValue1;
   FormFieldController<String>? dropDownValueController1;
-  DateTime? datePicked;
   // State field(s) for Geboortedatum widget.
   FocusNode? geboortedatumFocusNode;
   TextEditingController? geboortedatumTextController;
   String? Function(BuildContext, String?)? geboortedatumTextControllerValidator;
+  DateTime? datePicked;
   // State field(s) for TextField widget.
   FocusNode? textFieldFocusNode3;
   TextEditingController? textController4;
