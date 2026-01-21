@@ -101,11 +101,6 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
                     page: SlachtofferMapWidget(),
                   )),
         FFRoute(
-          name: HomeHulpverlenerWidget.routeName,
-          path: HomeHulpverlenerWidget.routePath,
-          builder: (context, params) => HomeHulpverlenerWidget(),
-        ),
-        FFRoute(
             name: SlachtofferHomeWidget.routeName,
             path: SlachtofferHomeWidget.routePath,
             builder: (context, params) => params.isEmpty
@@ -137,6 +132,16 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           name: BerichtenWidget.routeName,
           path: BerichtenWidget.routePath,
           builder: (context, params) => BerichtenWidget(),
+        ),
+        FFRoute(
+          name: HulpverlenerHomeWidget.routeName,
+          path: HulpverlenerHomeWidget.routePath,
+          builder: (context, params) => HulpverlenerHomeWidget(),
+        ),
+        FFRoute(
+          name: MapWidget.routeName,
+          path: MapWidget.routePath,
+          builder: (context, params) => MapWidget(),
         )
       ].map((r) => r.toRoute(appStateNotifier)).toList(),
     );

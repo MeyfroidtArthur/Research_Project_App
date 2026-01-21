@@ -1,3 +1,36 @@
 {
-  "indexes": []
+  "indexes": [
+    {
+      "collectionGroup": "Teams",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "EventId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "Status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "Interventie",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "eventId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "teamId",
+          "arrayConfig": "CONTAINS"
+        }
+      ]
+    }
+  ]
 }

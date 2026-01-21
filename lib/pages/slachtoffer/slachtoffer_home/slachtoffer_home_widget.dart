@@ -148,6 +148,7 @@ class _SlachtofferHomeWidgetState extends State<SlachtofferHomeWidget> {
                                     emergencyContact:
                                         FFAppState().User.noodcontact,
                                     ermergencyLevel: 1,
+                                    eventId: FFAppState().Event.id,
                                   ));
                                   _model.call =
                                       ConnectionRecord.getDocumentFromData(
@@ -168,6 +169,7 @@ class _SlachtofferHomeWidgetState extends State<SlachtofferHomeWidget> {
                                             emergencyContact:
                                                 FFAppState().User.noodcontact,
                                             ermergencyLevel: 1,
+                                            eventId: FFAppState().Event.id,
                                           ),
                                           connectionRecordReference);
                                   FFAppState().Call = ActiveCallStruct(

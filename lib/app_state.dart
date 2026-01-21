@@ -60,6 +60,12 @@ class FFAppState extends ChangeNotifier {
     await _safeInitAsync(() async {
       _TeamLabel = await secureStorage.getString('ff_TeamLabel') ?? _TeamLabel;
     });
+    await _safeInitAsync(() async {
+      _StartTime = await secureStorage.read(key: 'ff_StartTime') != null
+          ? DateTime.fromMillisecondsSinceEpoch(
+              (await secureStorage.getInt('ff_StartTime'))!)
+          : _StartTime;
+    });
   }
 
   void update(VoidCallback callback) {
@@ -139,6 +145,19 @@ class FFAppState extends ChangeNotifier {
 
   void deleteTeamLabel() {
     secureStorage.delete(key: 'ff_TeamLabel');
+  }
+
+  DateTime? _StartTime;
+  DateTime? get StartTime => _StartTime;
+  set StartTime(DateTime? value) {
+    _StartTime = value;
+    value != null
+        ? secureStorage.setInt('ff_StartTime', value.millisecondsSinceEpoch)
+        : secureStorage.remove('ff_StartTime');
+  }
+
+  void deleteStartTime() {
+    secureStorage.delete(key: 'ff_StartTime');
   }
 }
 

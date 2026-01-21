@@ -21,11 +21,6 @@ class InterventieRecord extends FirestoreRecord {
   DocumentReference? get connectionId => _connectionId;
   bool hasConnectionId() => _connectionId != null;
 
-  // "teamId" field.
-  DocumentReference? _teamId;
-  DocumentReference? get teamId => _teamId;
-  bool hasTeamId() => _teamId != null;
-
   // "situatie" field.
   String? _situatie;
   String get situatie => _situatie ?? '';
@@ -41,28 +36,59 @@ class InterventieRecord extends FirestoreRecord {
   LatLng? get location => _location;
   bool hasLocation() => _location != null;
 
-  // "time" field.
-  DateTime? _time;
-  DateTime? get time => _time;
-  bool hasTime() => _time != null;
-
   // "status" field.
   Statusinterventie? _status;
   Statusinterventie? get status => _status;
   bool hasStatus() => _status != null;
 
+  // "teamId" field.
+  List<DocumentReference>? _teamId;
+  List<DocumentReference> get teamId => _teamId ?? const [];
+  bool hasTeamId() => _teamId != null;
+
+  // "uitgecheckt" field.
+  Uitgecheckt? _uitgecheckt;
+  Uitgecheckt? get uitgecheckt => _uitgecheckt;
+  bool hasUitgecheckt() => _uitgecheckt != null;
+
+  // "StartTime" field.
+  DateTime? _startTime;
+  DateTime? get startTime => _startTime;
+  bool hasStartTime() => _startTime != null;
+
+  // "EndTime" field.
+  DateTime? _endTime;
+  DateTime? get endTime => _endTime;
+  bool hasEndTime() => _endTime != null;
+
+  // "eventId" field.
+  DocumentReference? _eventId;
+  DocumentReference? get eventId => _eventId;
+  bool hasEventId() => _eventId != null;
+
+  // "verslag" field.
+  String? _verslag;
+  String get verslag => _verslag ?? '';
+  bool hasVerslag() => _verslag != null;
+
   void _initializeFields() {
     _connectionId = snapshotData['connectionId'] as DocumentReference?;
-    _teamId = snapshotData['teamId'] as DocumentReference?;
     _situatie = snapshotData['situatie'] as String?;
     _slachtofferDetails = snapshotData['slachtofferDetails'] is UserStruct
         ? snapshotData['slachtofferDetails']
         : UserStruct.maybeFromMap(snapshotData['slachtofferDetails']);
     _location = snapshotData['location'] as LatLng?;
-    _time = snapshotData['time'] as DateTime?;
     _status = snapshotData['status'] is Statusinterventie
         ? snapshotData['status']
         : deserializeEnum<Statusinterventie>(snapshotData['status']);
+    _teamId = getDataList(snapshotData['teamId']);
+    _uitgecheckt = snapshotData['uitgecheckt'] is Uitgecheckt
+        ? snapshotData['uitgecheckt']
+        : deserializeEnum<Uitgecheckt>(snapshotData['uitgecheckt']);
+    _startTime = snapshotData['StartTime'] as DateTime?;
+    _endTime = snapshotData['EndTime'] as DateTime?;
+    _eventId = snapshotData['eventId'] as DocumentReference?;
+    _verslag = snapshotData['verslag'] as String?;
   }
 
   static CollectionReference get collection =>
@@ -101,22 +127,28 @@ class InterventieRecord extends FirestoreRecord {
 
 Map<String, dynamic> createInterventieRecordData({
   DocumentReference? connectionId,
-  DocumentReference? teamId,
   String? situatie,
   UserStruct? slachtofferDetails,
   LatLng? location,
-  DateTime? time,
   Statusinterventie? status,
+  Uitgecheckt? uitgecheckt,
+  DateTime? startTime,
+  DateTime? endTime,
+  DocumentReference? eventId,
+  String? verslag,
 }) {
   final firestoreData = mapToFirestore(
     <String, dynamic>{
       'connectionId': connectionId,
-      'teamId': teamId,
       'situatie': situatie,
       'slachtofferDetails': UserStruct().toMap(),
       'location': location,
-      'time': time,
       'status': status,
+      'uitgecheckt': uitgecheckt,
+      'StartTime': startTime,
+      'EndTime': endTime,
+      'eventId': eventId,
+      'verslag': verslag,
     }.withoutNulls,
   );
 
@@ -131,24 +163,33 @@ class InterventieRecordDocumentEquality implements Equality<InterventieRecord> {
 
   @override
   bool equals(InterventieRecord? e1, InterventieRecord? e2) {
+    const listEquality = ListEquality();
     return e1?.connectionId == e2?.connectionId &&
-        e1?.teamId == e2?.teamId &&
         e1?.situatie == e2?.situatie &&
         e1?.slachtofferDetails == e2?.slachtofferDetails &&
         e1?.location == e2?.location &&
-        e1?.time == e2?.time &&
-        e1?.status == e2?.status;
+        e1?.status == e2?.status &&
+        listEquality.equals(e1?.teamId, e2?.teamId) &&
+        e1?.uitgecheckt == e2?.uitgecheckt &&
+        e1?.startTime == e2?.startTime &&
+        e1?.endTime == e2?.endTime &&
+        e1?.eventId == e2?.eventId &&
+        e1?.verslag == e2?.verslag;
   }
 
   @override
   int hash(InterventieRecord? e) => const ListEquality().hash([
         e?.connectionId,
-        e?.teamId,
         e?.situatie,
         e?.slachtofferDetails,
         e?.location,
-        e?.time,
-        e?.status
+        e?.status,
+        e?.teamId,
+        e?.uitgecheckt,
+        e?.startTime,
+        e?.endTime,
+        e?.eventId,
+        e?.verslag
       ]);
 
   @override

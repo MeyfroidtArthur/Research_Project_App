@@ -71,6 +71,11 @@ class ConnectionRecord extends FirestoreRecord {
   int get ermergencyLevel => _ermergencyLevel ?? 0;
   bool hasErmergencyLevel() => _ermergencyLevel != null;
 
+  // "eventId" field.
+  DocumentReference? _eventId;
+  DocumentReference? get eventId => _eventId;
+  bool hasEventId() => _eventId != null;
+
   void _initializeFields() {
     _voornaam = snapshotData['voornaam'] as String?;
     _achternaam = snapshotData['achternaam'] as String?;
@@ -85,6 +90,7 @@ class ConnectionRecord extends FirestoreRecord {
         ? snapshotData['status']
         : deserializeEnum<Statuscall>(snapshotData['status']);
     _ermergencyLevel = castToType<int>(snapshotData['ermergencyLevel']);
+    _eventId = snapshotData['eventId'] as DocumentReference?;
   }
 
   static CollectionReference get collection =>
@@ -133,6 +139,7 @@ Map<String, dynamic> createConnectionRecordData({
   String? emergencyContact,
   Statuscall? status,
   int? ermergencyLevel,
+  DocumentReference? eventId,
 }) {
   final firestoreData = mapToFirestore(
     <String, dynamic>{
@@ -147,6 +154,7 @@ Map<String, dynamic> createConnectionRecordData({
       'emergencyContact': emergencyContact,
       'status': status,
       'ermergencyLevel': ermergencyLevel,
+      'eventId': eventId,
     }.withoutNulls,
   );
 
@@ -168,7 +176,8 @@ class ConnectionRecordDocumentEquality implements Equality<ConnectionRecord> {
         e1?.extraInfo == e2?.extraInfo &&
         e1?.emergencyContact == e2?.emergencyContact &&
         e1?.status == e2?.status &&
-        e1?.ermergencyLevel == e2?.ermergencyLevel;
+        e1?.ermergencyLevel == e2?.ermergencyLevel &&
+        e1?.eventId == e2?.eventId;
   }
 
   @override
@@ -183,7 +192,8 @@ class ConnectionRecordDocumentEquality implements Equality<ConnectionRecord> {
         e?.extraInfo,
         e?.emergencyContact,
         e?.status,
-        e?.ermergencyLevel
+        e?.ermergencyLevel,
+        e?.eventId
       ]);
 
   @override

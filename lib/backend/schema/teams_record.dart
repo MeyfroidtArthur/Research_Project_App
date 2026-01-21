@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 
 import '/backend/schema/util/firestore_util.dart';
+import '/backend/schema/enums/enums.dart';
 
 import 'index.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -15,11 +16,6 @@ class TeamsRecord extends FirestoreRecord {
     _initializeFields();
   }
 
-  // "EventId" field.
-  String? _eventId;
-  String get eventId => _eventId ?? '';
-  bool hasEventId() => _eventId != null;
-
   // "Naam" field.
   String? _naam;
   String get naam => _naam ?? '';
@@ -30,22 +26,29 @@ class TeamsRecord extends FirestoreRecord {
   String get prefix => _prefix ?? '';
   bool hasPrefix() => _prefix != null;
 
-  // "Status" field.
-  String? _status;
-  String get status => _status ?? '';
-  bool hasStatus() => _status != null;
-
   // "Locatie" field.
   String? _locatie;
   String get locatie => _locatie ?? '';
   bool hasLocatie() => _locatie != null;
 
+  // "Status" field.
+  TeamStatus? _status;
+  TeamStatus? get status => _status;
+  bool hasStatus() => _status != null;
+
+  // "EventId" field.
+  DocumentReference? _eventId;
+  DocumentReference? get eventId => _eventId;
+  bool hasEventId() => _eventId != null;
+
   void _initializeFields() {
-    _eventId = snapshotData['EventId'] as String?;
     _naam = snapshotData['Naam'] as String?;
     _prefix = snapshotData['Prefix'] as String?;
-    _status = snapshotData['Status'] as String?;
     _locatie = snapshotData['Locatie'] as String?;
+    _status = snapshotData['Status'] is TeamStatus
+        ? snapshotData['Status']
+        : deserializeEnum<TeamStatus>(snapshotData['Status']);
+    _eventId = snapshotData['EventId'] as DocumentReference?;
   }
 
   static CollectionReference get collection =>
@@ -82,19 +85,19 @@ class TeamsRecord extends FirestoreRecord {
 }
 
 Map<String, dynamic> createTeamsRecordData({
-  String? eventId,
   String? naam,
   String? prefix,
-  String? status,
   String? locatie,
+  TeamStatus? status,
+  DocumentReference? eventId,
 }) {
   final firestoreData = mapToFirestore(
     <String, dynamic>{
-      'EventId': eventId,
       'Naam': naam,
       'Prefix': prefix,
-      'Status': status,
       'Locatie': locatie,
+      'Status': status,
+      'EventId': eventId,
     }.withoutNulls,
   );
 
@@ -106,16 +109,16 @@ class TeamsRecordDocumentEquality implements Equality<TeamsRecord> {
 
   @override
   bool equals(TeamsRecord? e1, TeamsRecord? e2) {
-    return e1?.eventId == e2?.eventId &&
-        e1?.naam == e2?.naam &&
+    return e1?.naam == e2?.naam &&
         e1?.prefix == e2?.prefix &&
+        e1?.locatie == e2?.locatie &&
         e1?.status == e2?.status &&
-        e1?.locatie == e2?.locatie;
+        e1?.eventId == e2?.eventId;
   }
 
   @override
   int hash(TeamsRecord? e) => const ListEquality()
-      .hash([e?.eventId, e?.naam, e?.prefix, e?.status, e?.locatie]);
+      .hash([e?.naam, e?.prefix, e?.locatie, e?.status, e?.eventId]);
 
   @override
   bool isValidKey(Object? o) => o is TeamsRecord;

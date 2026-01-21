@@ -13,12 +13,14 @@ class EventStruct extends FFFirebaseStruct {
     String? code,
     DateTime? start,
     DateTime? end,
+    DocumentReference? id,
     FirestoreUtilData firestoreUtilData = const FirestoreUtilData(),
   })  : _naam = naam,
         _locatie = locatie,
         _code = code,
         _start = start,
         _end = end,
+        _id = id,
         super(firestoreUtilData);
 
   // "Naam" field.
@@ -56,12 +58,20 @@ class EventStruct extends FFFirebaseStruct {
 
   bool hasEnd() => _end != null;
 
+  // "id" field.
+  DocumentReference? _id;
+  DocumentReference? get id => _id;
+  set id(DocumentReference? val) => _id = val;
+
+  bool hasId() => _id != null;
+
   static EventStruct fromMap(Map<String, dynamic> data) => EventStruct(
         naam: data['Naam'] as String?,
         locatie: data['Locatie'] as String?,
         code: data['Code'] as String?,
         start: data['Start'] as DateTime?,
         end: data['End'] as DateTime?,
+        id: data['id'] as DocumentReference?,
       );
 
   static EventStruct? maybeFromMap(dynamic data) =>
@@ -73,6 +83,7 @@ class EventStruct extends FFFirebaseStruct {
         'Code': _code,
         'Start': _start,
         'End': _end,
+        'id': _id,
       }.withoutNulls;
 
   @override
@@ -96,6 +107,10 @@ class EventStruct extends FFFirebaseStruct {
         'End': serializeParam(
           _end,
           ParamType.DateTime,
+        ),
+        'id': serializeParam(
+          _id,
+          ParamType.DocumentReference,
         ),
       }.withoutNulls;
 
@@ -126,6 +141,12 @@ class EventStruct extends FFFirebaseStruct {
           ParamType.DateTime,
           false,
         ),
+        id: deserializeParam(
+          data['id'],
+          ParamType.DocumentReference,
+          false,
+          collectionNamePath: ['Event'],
+        ),
       );
 
   @override
@@ -138,12 +159,13 @@ class EventStruct extends FFFirebaseStruct {
         locatie == other.locatie &&
         code == other.code &&
         start == other.start &&
-        end == other.end;
+        end == other.end &&
+        id == other.id;
   }
 
   @override
   int get hashCode =>
-      const ListEquality().hash([naam, locatie, code, start, end]);
+      const ListEquality().hash([naam, locatie, code, start, end, id]);
 }
 
 EventStruct createEventStruct({
@@ -152,6 +174,7 @@ EventStruct createEventStruct({
   String? code,
   DateTime? start,
   DateTime? end,
+  DocumentReference? id,
   Map<String, dynamic> fieldValues = const {},
   bool clearUnsetFields = true,
   bool create = false,
@@ -163,6 +186,7 @@ EventStruct createEventStruct({
       code: code,
       start: start,
       end: end,
+      id: id,
       firestoreUtilData: FirestoreUtilData(
         clearUnsetFields: clearUnsetFields,
         create: create,

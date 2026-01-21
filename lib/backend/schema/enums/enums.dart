@@ -11,6 +11,17 @@ enum Statusinterventie {
   finished,
 }
 
+enum Uitgecheckt {
+  Event,
+  Thuis,
+  Ziekenhuis,
+}
+
+enum TeamStatus {
+  Available,
+  Unavailable,
+}
+
 extension FFEnumExtensions<T extends Enum> on T {
   String serialize() => name;
 }
@@ -26,6 +37,10 @@ T? deserializeEnum<T>(String? value) {
       return Statuscall.values.deserialize(value) as T?;
     case (Statusinterventie):
       return Statusinterventie.values.deserialize(value) as T?;
+    case (Uitgecheckt):
+      return Uitgecheckt.values.deserialize(value) as T?;
+    case (TeamStatus):
+      return TeamStatus.values.deserialize(value) as T?;
     default:
       return null;
   }

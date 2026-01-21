@@ -182,11 +182,11 @@ class _NavBarPageState extends State<NavBarPage> {
           ),
           BottomNavigationBarItem(
             icon: Icon(
-              FFIcons.kmapTrifold,
+              FFIcons.kmapPin,
               size: 24.0,
             ),
             activeIcon: Icon(
-              FFIcons.kmapTrifoldBold,
+              FFIcons.kmapPinBold,
               size: 24.0,
             ),
             label: 'Map',

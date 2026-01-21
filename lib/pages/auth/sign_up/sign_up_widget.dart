@@ -53,7 +53,7 @@ class _SignUpWidgetState extends State<SignUpWidget> {
       ).then((s) => s.firstOrNull);
       if (_model.loginAgainVrijwilliger?.reference != null) {
         context.pushNamed(
-          HomeHulpverlenerWidget.routeName,
+          HulpverlenerHomeWidget.routeName,
           extra: <String, dynamic>{
             kTransitionInfoKey: TransitionInfo(
               hasTransition: true,
@@ -290,9 +290,6 @@ class _SignUpWidgetState extends State<SignUpWidget> {
                                 _shouldSetState = true;
                                 if (_model.eventListVrijwilligerQR?.reference !=
                                     null) {
-                                  context.pushNamed(
-                                      HomeHulpverlenerWidget.routeName);
-
                                   FFAppState().Event = EventStruct(
                                     naam: _model.eventListVrijwilligerQR?.naam,
                                     locatie:
@@ -301,15 +298,24 @@ class _SignUpWidgetState extends State<SignUpWidget> {
                                     start: _model
                                         .eventListVrijwilligerQR?.startTime,
                                     end: _model.eventListVrijwilliger?.endTime,
+                                    id: _model
+                                        .eventListVrijwilligerQR?.reference,
                                   );
                                   safeSetState(() {});
+
+                                  context.pushNamed(
+                                    HulpverlenerHomeWidget.routeName,
+                                    extra: <String, dynamic>{
+                                      kTransitionInfoKey: TransitionInfo(
+                                        hasTransition: true,
+                                        transitionType: PageTransitionType.fade,
+                                      ),
+                                    },
+                                  );
                                 } else {
                                   if (_model
                                           .eventListSlachtofferQR?.reference !=
                                       null) {
-                                    context.pushNamed(
-                                        SlachtofferMapWidget.routeName);
-
                                     FFAppState().Event = EventStruct(
                                       naam: _model.eventListSlachtofferQR?.naam,
                                       locatie: _model
@@ -319,8 +325,21 @@ class _SignUpWidgetState extends State<SignUpWidget> {
                                           .eventListSlachtofferQR?.startTime,
                                       end: _model
                                           .eventListSlachtofferQR?.endTime,
+                                      id: _model
+                                          .loginAgainSlachtoffer?.reference,
                                     );
                                     safeSetState(() {});
+
+                                    context.pushNamed(
+                                      SlachtofferHomeWidget.routeName,
+                                      extra: <String, dynamic>{
+                                        kTransitionInfoKey: TransitionInfo(
+                                          hasTransition: true,
+                                          transitionType:
+                                              PageTransitionType.fade,
+                                        ),
+                                      },
+                                    );
                                   } else {
                                     await showDialog(
                                       context: context,
@@ -401,7 +420,6 @@ class _SignUpWidgetState extends State<SignUpWidget> {
                                   ).then((s) => s.firstOrNull);
                                   _shouldSetState = true;
                                 } else {
-                                  Navigator.pop(context);
                                   if (_shouldSetState) safeSetState(() {});
                                   return;
                                 }
@@ -418,9 +436,6 @@ class _SignUpWidgetState extends State<SignUpWidget> {
                                 _shouldSetState = true;
                                 if (_model.eventListVrijwilliger?.reference !=
                                     null) {
-                                  context.pushNamed(
-                                      HomeHulpverlenerWidget.routeName);
-
                                   FFAppState().Event = EventStruct(
                                     naam: _model.eventListVrijwilliger?.naam,
                                     locatie:
@@ -429,14 +444,22 @@ class _SignUpWidgetState extends State<SignUpWidget> {
                                     start:
                                         _model.eventListVrijwilliger?.startTime,
                                     end: _model.eventListVrijwilliger?.endTime,
+                                    id: _model.eventListVrijwilliger?.reference,
                                   );
                                   safeSetState(() {});
+
+                                  context.pushNamed(
+                                    HulpverlenerHomeWidget.routeName,
+                                    extra: <String, dynamic>{
+                                      kTransitionInfoKey: TransitionInfo(
+                                        hasTransition: true,
+                                        transitionType: PageTransitionType.fade,
+                                      ),
+                                    },
+                                  );
                                 } else {
                                   if (_model.eventListSlachtoffer?.reference !=
                                       null) {
-                                    context.pushNamed(
-                                        SlachtofferMapWidget.routeName);
-
                                     FFAppState().Event = EventStruct(
                                       naam: _model.eventListSlachtoffer?.naam,
                                       locatie:
@@ -445,8 +468,21 @@ class _SignUpWidgetState extends State<SignUpWidget> {
                                       start: _model
                                           .eventListSlachtoffer?.startTime,
                                       end: _model.eventListSlachtoffer?.endTime,
+                                      id: _model
+                                          .eventListSlachtoffer?.reference,
                                     );
                                     safeSetState(() {});
+
+                                    context.pushNamed(
+                                      SlachtofferHomeWidget.routeName,
+                                      extra: <String, dynamic>{
+                                        kTransitionInfoKey: TransitionInfo(
+                                          hasTransition: true,
+                                          transitionType:
+                                              PageTransitionType.fade,
+                                        ),
+                                      },
+                                    );
                                   } else {
                                     await showDialog(
                                       context: context,
