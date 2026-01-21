@@ -1234,217 +1234,196 @@ class _EndInterventionWidgetState extends State<EndInterventionWidget> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.max,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Uitgecheckt',
-                              style: FlutterFlowTheme.of(context)
-                                  .labelMedium
-                                  .override(
-                                    font: GoogleFonts.inter(
-                                      fontWeight: FlutterFlowTheme.of(context)
-                                          .labelMedium
-                                          .fontWeight,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .labelMedium
-                                          .fontStyle,
-                                    ),
-                                    color: FlutterFlowTheme.of(context)
-                                        .secondaryText,
-                                    letterSpacing: 0.0,
-                                    fontWeight: FlutterFlowTheme.of(context)
-                                        .labelMedium
-                                        .fontWeight,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .labelMedium
-                                        .fontStyle,
-                                  ),
-                            ),
-                            FlutterFlowDropDown<Uitgecheckt>(
-                              controller: _model.dropDownValueController2 ??=
-                                  FormFieldController<Uitgecheckt>(null),
-                              options:
-                                  List<Uitgecheckt>.from(Uitgecheckt.values),
-                              optionLabels: Uitgecheckt.values
-                                  .map((e) => e.name)
-                                  .toList(),
-                              onChanged: (val) => safeSetState(
-                                  () => _model.dropDownValue2 = val),
-                              height: 30.0,
-                              textStyle: FlutterFlowTheme.of(context)
-                                  .bodySmall
-                                  .override(
-                                    font: GoogleFonts.inter(
-                                      fontWeight: FlutterFlowTheme.of(context)
-                                          .bodySmall
-                                          .fontWeight,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .bodySmall
-                                          .fontStyle,
-                                    ),
-                                    letterSpacing: 0.0,
-                                    fontWeight: FlutterFlowTheme.of(context)
-                                        .bodySmall
-                                        .fontWeight,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .bodySmall
-                                        .fontStyle,
-                                  ),
-                              hintText: 'Select...',
-                              icon: Icon(
-                                Icons.keyboard_arrow_down_rounded,
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Uitgecheckt',
+                          style: FlutterFlowTheme.of(context)
+                              .labelMedium
+                              .override(
+                                font: GoogleFonts.inter(
+                                  fontWeight: FlutterFlowTheme.of(context)
+                                      .labelMedium
+                                      .fontWeight,
+                                  fontStyle: FlutterFlowTheme.of(context)
+                                      .labelMedium
+                                      .fontStyle,
+                                ),
                                 color:
                                     FlutterFlowTheme.of(context).secondaryText,
-                                size: 24.0,
+                                letterSpacing: 0.0,
+                                fontWeight: FlutterFlowTheme.of(context)
+                                    .labelMedium
+                                    .fontWeight,
+                                fontStyle: FlutterFlowTheme.of(context)
+                                    .labelMedium
+                                    .fontStyle,
                               ),
-                              fillColor: FlutterFlowTheme.of(context)
-                                  .primaryBackground,
-                              elevation: 2.0,
-                              borderColor:
-                                  FlutterFlowTheme.of(context).alternate,
-                              borderWidth: 0.0,
-                              borderRadius: 8.0,
-                              margin: EdgeInsetsDirectional.fromSTEB(
-                                  12.0, 0.0, 12.0, 0.0),
-                              hidesUnderline: true,
-                              isOverButton: false,
-                              isSearchable: false,
-                              isMultiSelect: false,
-                            ),
-                          ].divide(SizedBox(height: 4.0)),
                         ),
-                      ),
-                    ].divide(SizedBox(width: 16.0)),
+                        FlutterFlowDropDown<Uitgecheckt>(
+                          controller: _model.dropDownValueController2 ??=
+                              FormFieldController<Uitgecheckt>(null),
+                          options: List<Uitgecheckt>.from(Uitgecheckt.values),
+                          optionLabels:
+                              Uitgecheckt.values.map((e) => e.name).toList(),
+                          onChanged: (val) =>
+                              safeSetState(() => _model.dropDownValue2 = val),
+                          height: 30.0,
+                          textStyle:
+                              FlutterFlowTheme.of(context).bodySmall.override(
+                                    font: GoogleFonts.inter(
+                                      fontWeight: FlutterFlowTheme.of(context)
+                                          .bodySmall
+                                          .fontWeight,
+                                      fontStyle: FlutterFlowTheme.of(context)
+                                          .bodySmall
+                                          .fontStyle,
+                                    ),
+                                    letterSpacing: 0.0,
+                                    fontWeight: FlutterFlowTheme.of(context)
+                                        .bodySmall
+                                        .fontWeight,
+                                    fontStyle: FlutterFlowTheme.of(context)
+                                        .bodySmall
+                                        .fontStyle,
+                                  ),
+                          hintText: 'Select...',
+                          icon: Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: FlutterFlowTheme.of(context).secondaryText,
+                            size: 24.0,
+                          ),
+                          fillColor:
+                              FlutterFlowTheme.of(context).primaryBackground,
+                          elevation: 2.0,
+                          borderColor: FlutterFlowTheme.of(context).alternate,
+                          borderWidth: 0.0,
+                          borderRadius: 8.0,
+                          margin: EdgeInsetsDirectional.fromSTEB(
+                              12.0, 0.0, 12.0, 0.0),
+                          hidesUnderline: true,
+                          isOverButton: false,
+                          isSearchable: false,
+                          isMultiSelect: false,
+                        ),
+                      ].divide(SizedBox(height: 4.0)),
+                    ),
                   ),
-                  Row(
-                    mainAxisSize: MainAxisSize.max,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Eindverslag',
-                              style: FlutterFlowTheme.of(context)
-                                  .labelMedium
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Eindverslag',
+                          style: FlutterFlowTheme.of(context)
+                              .labelMedium
+                              .override(
+                                font: GoogleFonts.inter(
+                                  fontWeight: FlutterFlowTheme.of(context)
+                                      .labelMedium
+                                      .fontWeight,
+                                  fontStyle: FlutterFlowTheme.of(context)
+                                      .labelMedium
+                                      .fontStyle,
+                                ),
+                                color:
+                                    FlutterFlowTheme.of(context).secondaryText,
+                                letterSpacing: 0.0,
+                                fontWeight: FlutterFlowTheme.of(context)
+                                    .labelMedium
+                                    .fontWeight,
+                                fontStyle: FlutterFlowTheme.of(context)
+                                    .labelMedium
+                                    .fontStyle,
+                              ),
+                        ),
+                        Container(
+                          width: MediaQuery.sizeOf(context).width * 1.0,
+                          child: TextFormField(
+                            controller: _model.textController7,
+                            focusNode: _model.textFieldFocusNode6,
+                            autofocus: false,
+                            enabled: true,
+                            obscureText: false,
+                            decoration: InputDecoration(
+                              isDense: true,
+                              labelStyle: FlutterFlowTheme.of(context)
+                                  .labelSmall
                                   .override(
                                     font: GoogleFonts.inter(
                                       fontWeight: FlutterFlowTheme.of(context)
-                                          .labelMedium
+                                          .labelSmall
                                           .fontWeight,
                                       fontStyle: FlutterFlowTheme.of(context)
-                                          .labelMedium
+                                          .labelSmall
                                           .fontStyle,
                                     ),
-                                    color: FlutterFlowTheme.of(context)
-                                        .secondaryText,
                                     letterSpacing: 0.0,
                                     fontWeight: FlutterFlowTheme.of(context)
-                                        .labelMedium
+                                        .labelSmall
                                         .fontWeight,
                                     fontStyle: FlutterFlowTheme.of(context)
-                                        .labelMedium
+                                        .labelSmall
                                         .fontStyle,
                                   ),
-                            ),
-                            Container(
-                              width: MediaQuery.sizeOf(context).width * 1.0,
-                              child: TextFormField(
-                                controller: _model.textController7,
-                                focusNode: _model.textFieldFocusNode6,
-                                autofocus: false,
-                                enabled: true,
-                                obscureText: false,
-                                decoration: InputDecoration(
-                                  isDense: true,
-                                  labelStyle: FlutterFlowTheme.of(context)
-                                      .labelSmall
-                                      .override(
-                                        font: GoogleFonts.inter(
-                                          fontWeight:
-                                              FlutterFlowTheme.of(context)
-                                                  .labelSmall
-                                                  .fontWeight,
-                                          fontStyle:
-                                              FlutterFlowTheme.of(context)
-                                                  .labelSmall
-                                                  .fontStyle,
-                                        ),
-                                        letterSpacing: 0.0,
-                                        fontWeight: FlutterFlowTheme.of(context)
-                                            .labelSmall
-                                            .fontWeight,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .labelSmall
-                                            .fontStyle,
-                                      ),
-                                  hintText: 'Eindverslag',
-                                  hintStyle: FlutterFlowTheme.of(context)
-                                      .labelSmall
-                                      .override(
-                                        font: GoogleFonts.inter(
-                                          fontWeight:
-                                              FlutterFlowTheme.of(context)
-                                                  .labelSmall
-                                                  .fontWeight,
-                                          fontStyle:
-                                              FlutterFlowTheme.of(context)
-                                                  .labelSmall
-                                                  .fontStyle,
-                                        ),
-                                        letterSpacing: 0.0,
-                                        fontWeight: FlutterFlowTheme.of(context)
-                                            .labelSmall
-                                            .fontWeight,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .labelSmall
-                                            .fontStyle,
-                                      ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: FlutterFlowTheme.of(context)
-                                          .alternate,
-                                      width: 1.0,
+                              hintText: 'Eindverslag',
+                              hintStyle: FlutterFlowTheme.of(context)
+                                  .labelSmall
+                                  .override(
+                                    font: GoogleFonts.inter(
+                                      fontWeight: FlutterFlowTheme.of(context)
+                                          .labelSmall
+                                          .fontWeight,
+                                      fontStyle: FlutterFlowTheme.of(context)
+                                          .labelSmall
+                                          .fontStyle,
                                     ),
-                                    borderRadius: BorderRadius.circular(8.0),
+                                    letterSpacing: 0.0,
+                                    fontWeight: FlutterFlowTheme.of(context)
+                                        .labelSmall
+                                        .fontWeight,
+                                    fontStyle: FlutterFlowTheme.of(context)
+                                        .labelSmall
+                                        .fontStyle,
                                   ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: Color(0x00000000),
-                                      width: 1.0,
-                                    ),
-                                    borderRadius: BorderRadius.circular(8.0),
-                                  ),
-                                  errorBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: FlutterFlowTheme.of(context).error,
-                                      width: 1.0,
-                                    ),
-                                    borderRadius: BorderRadius.circular(8.0),
-                                  ),
-                                  focusedErrorBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: FlutterFlowTheme.of(context).error,
-                                      width: 1.0,
-                                    ),
-                                    borderRadius: BorderRadius.circular(8.0),
-                                  ),
-                                  filled: true,
-                                  fillColor: FlutterFlowTheme.of(context)
-                                      .primaryBackground,
+                              enabledBorder: OutlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: FlutterFlowTheme.of(context).alternate,
+                                  width: 1.0,
                                 ),
-                                style: FlutterFlowTheme.of(context)
-                                    .bodySmall
-                                    .override(
+                                borderRadius: BorderRadius.circular(8.0),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: Color(0x00000000),
+                                  width: 1.0,
+                                ),
+                                borderRadius: BorderRadius.circular(8.0),
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: FlutterFlowTheme.of(context).error,
+                                  width: 1.0,
+                                ),
+                                borderRadius: BorderRadius.circular(8.0),
+                              ),
+                              focusedErrorBorder: OutlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: FlutterFlowTheme.of(context).error,
+                                  width: 1.0,
+                                ),
+                                borderRadius: BorderRadius.circular(8.0),
+                              ),
+                              filled: true,
+                              fillColor: FlutterFlowTheme.of(context)
+                                  .primaryBackground,
+                            ),
+                            style:
+                                FlutterFlowTheme.of(context).bodySmall.override(
                                       font: GoogleFonts.inter(
                                         fontWeight: FlutterFlowTheme.of(context)
                                             .bodySmall
@@ -1461,18 +1440,16 @@ class _EndInterventionWidgetState extends State<EndInterventionWidget> {
                                           .bodySmall
                                           .fontStyle,
                                     ),
-                                maxLines: 10,
-                                cursorColor:
-                                    FlutterFlowTheme.of(context).primaryText,
-                                enableInteractiveSelection: true,
-                                validator: _model.textController7Validator
-                                    .asValidator(context),
-                              ),
-                            ),
-                          ].divide(SizedBox(height: 4.0)),
+                            maxLines: 10,
+                            cursorColor:
+                                FlutterFlowTheme.of(context).primaryText,
+                            enableInteractiveSelection: true,
+                            validator: _model.textController7Validator
+                                .asValidator(context),
+                          ),
                         ),
-                      ),
-                    ].divide(SizedBox(width: 16.0)),
+                      ].divide(SizedBox(height: 4.0)),
+                    ),
                   ),
                 ].divide(SizedBox(height: 16.0)),
               ),
