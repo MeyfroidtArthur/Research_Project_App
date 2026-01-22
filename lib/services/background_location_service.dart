@@ -14,7 +14,8 @@ Future<void> initHighPriorityNotifications() async {
   FlutterForegroundTask.addTaskDataCallback((data) async {
     if (data == 'dispatch_status_active') {
       print(
-          '✅ Background callback: Dispatch status active - showing notification');
+        '✅ Background callback: Dispatch status active - showing notification',
+      );
       // Show the notification using NotificationService
       await NotificationService.showDispatchStatusActive(
         id: 1002,
@@ -121,8 +122,10 @@ void startCallback() {
 class LocationTaskHandler extends TaskHandler {
   StreamSubscription<Position>? _positionSubscription;
   StreamSubscription<DocumentSnapshot>? _statusSubscription;
+  StreamSubscription<QuerySnapshot>? _interventionSubscription;
   DateTime? _lastUpdate;
   String? _lastKnownStatus;
+  String? _lastInterventionId;
 
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
@@ -132,36 +135,87 @@ class LocationTaskHandler extends TaskHandler {
       await NotificationService.initBackground();
     } catch (_) {}
 
-    final teamPath =
-        await FlutterForegroundTask.getData<String>(key: 'teamPath');
+    final teamPath = await FlutterForegroundTask.getData<String>(
+      key: 'teamPath',
+    );
 
     if (teamPath == null) return;
 
     _setupStatusListener(teamPath);
+    _setupInterventionListener(teamPath);
 
-    _positionSubscription = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 5,
-      ),
-    ).listen((position) async {
-      await _updateLocation(position, teamPath);
-    });
+    _positionSubscription =
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            distanceFilter: 5,
+          ),
+        ).listen((position) async {
+          await _updateLocation(position, teamPath);
+        });
   }
 
   void _setupStatusListener(String docPath) {
-    _statusSubscription =
-        FirebaseFirestore.instance.doc(docPath).snapshots().listen((snapshot) {
-      final status = snapshot.data()?['status'] as String?;
+    _statusSubscription = FirebaseFirestore.instance
+        .doc(docPath)
+        .snapshots()
+        .listen((snapshot) {
+          final status = snapshot.data()?['status'] as String?;
 
-      if (_lastKnownStatus != null &&
-          _lastKnownStatus != 'active' &&
-          status == 'active') {
-        _showCallAcceptedNotification();
-      }
+          if (_lastKnownStatus != null &&
+              _lastKnownStatus != 'active' &&
+              status == 'active') {
+            _showCallAcceptedNotification();
+          }
 
-      _lastKnownStatus = status;
-    });
+          _lastKnownStatus = status;
+        });
+  }
+
+  void _setupInterventionListener(String teamPath) {
+    // Convert team path to reference for query
+    final teamRef = FirebaseFirestore.instance.doc(teamPath);
+
+    _interventionSubscription = FirebaseFirestore.instance
+        .collection('Interventie')
+        .where('teamId', arrayContains: teamRef)
+        .where('status', isEqualTo: 'active')
+        .snapshots()
+        .listen((snapshot) {
+          if (snapshot.docs.isNotEmpty) {
+            // Get the most recent active intervention
+            final doc = snapshot.docs.first;
+
+            // Only notify if it's a NEW intervention we haven't seen yet
+            if (_lastInterventionId != doc.id) {
+              _showInterventionNotification();
+              _lastInterventionId = doc.id;
+            }
+          }
+        });
+  }
+
+  /// 🔔 Trigger HIGH priority popup for INTERVENTION
+  Future<void> _showInterventionNotification() async {
+    print('🚨 New Intervention Detected - waking screen');
+
+    // 1. Show notification DIRECTLY from background isolate
+    // We reuse the showDispatchStatusActive method as it has the correct channel/config
+    await NotificationService.showDispatchStatusActive(
+      id: 1003,
+      title: 'Interventie Alert! 🚨',
+      body: 'Er is een nieuwe interventie voor je team!',
+      payload: 'intervention_active',
+    );
+
+    // 2. Also send signal to main thread
+    FlutterForegroundTask.sendDataToMain('intervention_active');
+
+    // 3. Update persistent notification
+    FlutterForegroundTask.updateService(
+      notificationTitle: 'Redivo - Interventie!',
+      notificationText: 'Nieuwe interventie actief',
+    );
   }
 
   /// 🔔 Trigger HIGH priority popup for dispatch status change
@@ -188,8 +242,9 @@ class LocationTaskHandler extends TaskHandler {
 
   @override
   Future<void> onRepeatEvent(DateTime timestamp) async {
-    final teamPath =
-        await FlutterForegroundTask.getData<String>(key: 'teamPath');
+    final teamPath = await FlutterForegroundTask.getData<String>(
+      key: 'teamPath',
+    );
 
     if (teamPath == null) return;
 
@@ -226,6 +281,7 @@ class LocationTaskHandler extends TaskHandler {
   Future<void> onDestroy(DateTime timestamp) async {
     await _positionSubscription?.cancel();
     await _statusSubscription?.cancel();
+    await _interventionSubscription?.cancel();
   }
 
   @override
