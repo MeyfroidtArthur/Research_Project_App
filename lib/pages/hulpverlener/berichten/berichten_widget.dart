@@ -3,6 +3,7 @@ import '/components/navigation_widget.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
+import '/services/background_location_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -69,6 +70,10 @@ class _BerichtenWidgetState extends State<BerichtenWidget> {
                 hoverColor: Colors.transparent,
                 highlightColor: Colors.transparent,
                 onTap: () async {
+                  // Stop location tracking before logout
+                  final locationService = BackgroundLocationService();
+                  await locationService.stopTracking();
+
                   context.pushNamed(
                     SignUpWidget.routeName,
                     extra: <String, dynamic>{

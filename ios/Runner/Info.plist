@@ -56,6 +56,18 @@
 	<key>NSCameraUsageDescription</key>
     <string>In order to scan for barcodes and QR codes, this app requires permission to access the camera.</string>
 
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Deze app heeft toegang tot uw locatie nodig om de positie van uw team bij te houden tijdens interventies.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Deze app heeft toegang tot uw locatie nodig om de positie van uw team bij te houden, zelfs wanneer de app op de achtergrond draait.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Deze app heeft toegang tot uw locatie nodig om de positie van uw team bij te houden tijdens interventies.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+		<string>fetch</string>
+		<string>processing</string>
+	</array>
 
 
 

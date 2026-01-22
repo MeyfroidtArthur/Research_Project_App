@@ -1,10 +1,26 @@
-import '/backend/schema/structs/index.dart';
+import '/backend/backend.dart';
+
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
+import '/components/navigation_banner.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart' as latlong;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_map_location_marker/flutter_map_location_marker.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:flutter_compass/flutter_compass.dart';
+import 'package:http/http.dart' as http;
 import 'slachtoffer_map_model.dart';
+import '/backend/schema/map_pins_record.dart';
+import '/utils/map_utils.dart';
+import '/utils/route_result.dart';
+import 'dart:async'; // For StreamSubscription
+import 'dart:convert';
+import 'dart:math' show pi;
+
 export 'slachtoffer_map_model.dart';
 
 class SlachtofferMapWidget extends StatefulWidget {
@@ -19,24 +35,244 @@ class SlachtofferMapWidget extends StatefulWidget {
 
 class _SlachtofferMapWidgetState extends State<SlachtofferMapWidget> {
   late SlachtofferMapModel _model;
+  final MapController _mapController = MapController();
+
+  // Location tracking for distance calculation
+  latlong.LatLng? currentUserLocation;
+  // Use a nullable subscription to cancel it properly
+  StreamSubscription<Position>? _positionStreamSubscription;
+  StreamSubscription<CompassEvent>? _compassSubscription;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
+  String? mapboxAccessToken;
+  String? _mapboxError;
+
+  List<latlong.LatLng>? _routePoints;
+  String? _routeTargetName;
+  String? _routeEtaText;
+  bool _isFetchingRoute = false;
 
   @override
   void initState() {
     super.initState();
     _model = createModel(context, () => SlachtofferMapModel());
+    _loadMapboxRx();
+    _startLocationUpdates();
+    _startCompassUpdates();
+  }
+
+  double currentHeading = 0.0;
+
+  void _startCompassUpdates() {
+    _compassSubscription = FlutterCompass.events?.listen((event) {
+      if (mounted && event.heading != null) {
+        setState(() {
+          currentHeading = event.heading!;
+        });
+      }
+    });
+  }
+
+  void _startLocationUpdates() {
+    // Listen to location changes to update distance calculations in real-time
+    _positionStreamSubscription = Geolocator.getPositionStream(
+      locationSettings: LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 10, // Update every 10 meters
+      ),
+    ).listen((Position position) {
+      if (mounted) {
+        setState(() {
+          currentUserLocation = latlong.LatLng(
+            position.latitude,
+            position.longitude,
+          );
+        });
+      }
+    });
+  }
+
+  Future<void> _loadMapboxRx() async {
+    String? token;
+    try {
+      if (!dotenv.isInitialized) {
+        await dotenv.load(fileName: ".env");
+      }
+      token = dotenv.env['MAPBOX_ACCESS_TOKEN'];
+    } catch (e) {
+      print('Mapbox token load failed: $e');
+    }
+
+    token ??= const String.fromEnvironment('MAPBOX_ACCESS_TOKEN');
+
+    if (!mounted) return;
+
+    setState(() {
+      mapboxAccessToken = token;
+      _mapboxError = token == null
+          ? 'MAPBOX_ACCESS_TOKEN missing. Add it to .env or pass --dart-define=MAPBOX_ACCESS_TOKEN=...'
+          : null;
+    });
+  }
+
+  Future<void> _centerOnUser() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return;
+    }
+
+    Position position = await Geolocator.getCurrentPosition();
+    setState(() {
+      currentUserLocation = latlong.LatLng(
+        position.latitude,
+        position.longitude,
+      );
+    });
+
+    _mapController.move(
+      latlong.LatLng(position.latitude, position.longitude),
+      15.0,
+    );
+  }
+
+  Future<void> _startNavigation(MapPinsRecord record) async {
+    if (!record.hasLocation()) return;
+
+    final userLoc = currentUserLocation;
+    if (userLoc == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Waiting for your location...')),
+      );
+      await _centerOnUser();
+      return;
+    }
+
+    setState(() {
+      _isFetchingRoute = true;
+      _routeTargetName = record.name;
+      _routePoints = null;
+      _routeEtaText = null;
+    });
+
+    final destination = latlong.LatLng(
+      record.location!.latitude,
+      record.location!.longitude,
+    );
+
+    final result = await _fetchRoute(userLoc, destination);
+
+    if (!mounted) return;
+
+    if (result == null) {
+      setState(() {
+        _isFetchingRoute = false;
+        _routeTargetName = null;
+        _routePoints = null;
+        _routeEtaText = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to build route right now.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isFetchingRoute = false;
+      _routePoints = result.points;
+      _routeEtaText = result.etaText;
+    });
+
+    _fitRouteBounds(result.points);
+  }
+
+  Future<RouteResult?> _fetchRoute(
+    latlong.LatLng from,
+    latlong.LatLng to,
+  ) async {
+    if (mapboxAccessToken == null) return null;
+
+    final url = Uri.parse(
+      'https://api.mapbox.com/directions/v5/mapbox/walking/${from.longitude},${from.latitude};${to.longitude},${to.latitude}?geometries=geojson&overview=full&access_token=$mapboxAccessToken',
+    );
+
+    final response = await http.get(url);
+    if (response.statusCode != 200) return null;
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final routes = (data['routes'] as List?) ?? [];
+    if (routes.isEmpty) return null;
+
+    final route = routes.first as Map<String, dynamic>;
+    final geometry = route['geometry'] as Map<String, dynamic>?;
+    final coordinates = (geometry?['coordinates'] as List?) ?? [];
+
+    final points = coordinates
+        .map<latlong.LatLng>((coord) => latlong.LatLng(
+              (coord[1] as num).toDouble(),
+              (coord[0] as num).toDouble(),
+            ))
+        .toList();
+
+    final durationSeconds = (route['duration'] as num?)?.toDouble();
+    if (durationSeconds == null || points.isEmpty) return null;
+
+    return RouteResult(
+      points: points,
+      etaText: _formatDuration(durationSeconds),
+    );
+  }
+
+  String _formatDuration(double seconds) {
+    final minutes = (seconds / 60).round();
+    if (minutes < 60) return '$minutes min';
+    final hours = minutes ~/ 60;
+    final remainingMinutes = minutes % 60;
+    if (remainingMinutes == 0) return '$hours h';
+    return '$hours h $remainingMinutes min';
+  }
+
+  void _clearRoute() {
+    setState(() {
+      _routePoints = null;
+      _routeTargetName = null;
+      _routeEtaText = null;
+      _isFetchingRoute = false;
+    });
+  }
+
+  void _fitRouteBounds(List<latlong.LatLng> points) {
+    if (points.isEmpty) return;
+    final bounds = LatLngBounds.fromPoints(points);
+    _mapController.fitCamera(
+      CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(40)),
+    );
   }
 
   @override
   void dispose() {
     _model.dispose();
-
+    _positionStreamSubscription?.cancel();
+    _compassSubscription?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Ensure we have an Event Reference to listen to
+    final eventRef = FFAppState().Event.id;
+
     return GestureDetector(
       onTap: () {
         FocusScope.of(context).unfocus();
@@ -92,12 +328,490 @@ class _SlachtofferMapWidgetState extends State<SlachtofferMapWidget> {
         ),
         body: SafeArea(
           top: true,
-          child: Column(
-            mainAxisSize: MainAxisSize.max,
-            children: [],
+          child: Stack(
+            children: [
+              Column(
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  Expanded(
+                    child: _mapboxError != null
+                        ? Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  _mapboxError!,
+                                  textAlign: TextAlign.center,
+                                  style:
+                                      FlutterFlowTheme.of(context).bodyMedium,
+                                ),
+                                const SizedBox(height: 12),
+                                ElevatedButton(
+                                  onPressed: _loadMapboxRx,
+                                  child: const Text('Retry'),
+                                ),
+                              ],
+                            ),
+                          )
+                        : mapboxAccessToken == null
+                            ? Center(child: CircularProgressIndicator())
+                            : StreamBuilder<EventRecord>(
+                                stream: eventRef != null
+                                    ? EventRecord.getDocument(eventRef)
+                                    : null,
+                                builder: (context, snapshot) {
+                                  // Default location (Netherlands)
+                                  latlong.LatLng centerLocation =
+                                      latlong.LatLng(52.1326, 5.2913);
+                                  bool hasLocation = false;
+
+                                  if (snapshot.hasData &&
+                                      snapshot.data!.hasLocationCoordinates()) {
+                                    centerLocation = latlong.LatLng(
+                                      snapshot
+                                          .data!.locationCoordinates!.latitude,
+                                      snapshot
+                                          .data!.locationCoordinates!.longitude,
+                                    );
+                                    hasLocation = true;
+                                  } else if (FFAppState()
+                                      .Event
+                                      .hasLocationCoordinates()) {
+                                    // Fallback to AppState
+                                    centerLocation = latlong.LatLng(
+                                      FFAppState()
+                                          .Event
+                                          .locationCoordinates!
+                                          .latitude,
+                                      FFAppState()
+                                          .Event
+                                          .locationCoordinates!
+                                          .longitude,
+                                    );
+                                    hasLocation = true;
+                                  }
+
+                                  return StreamBuilder<List<MapPinsRecord>>(
+                                    stream: queryMapPinsRecord(
+                                      queryBuilder: eventRef != null
+                                          ? (q) => q.where('eventRef',
+                                              isEqualTo: eventRef)
+                                          : null,
+                                    ),
+                                    builder: (context, pinsSnapshot) {
+                                      if (!pinsSnapshot.hasData) {
+                                        return Center(
+                                          child: SizedBox(
+                                            width: 50.0,
+                                            height: 50.0,
+                                            child: CircularProgressIndicator(
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                FlutterFlowTheme.of(context)
+                                                    .primary,
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      }
+
+                                      List<MapPinsRecord> mapPinsRecordList =
+                                          pinsSnapshot.data!;
+
+                                      // Calculate distances if user location is known
+                                      final userLoc = currentUserLocation;
+                                      if (userLoc != null) {
+                                        mapPinsRecordList.sort((a, b) {
+                                          if (!a.hasLocation() ||
+                                              !b.hasLocation()) return 0;
+                                          final distA =
+                                              Geolocator.distanceBetween(
+                                            userLoc.latitude,
+                                            userLoc.longitude,
+                                            a.location!.latitude,
+                                            a.location!.longitude,
+                                          );
+                                          final distB =
+                                              Geolocator.distanceBetween(
+                                            userLoc.latitude,
+                                            userLoc.longitude,
+                                            b.location!.latitude,
+                                            b.location!.longitude,
+                                          );
+                                          return distA.compareTo(distB);
+                                        });
+                                      }
+
+                                      return Stack(
+                                        children: [
+                                          FlutterMap(
+                                            mapController: _mapController,
+                                            options: MapOptions(
+                                              initialCenter: centerLocation,
+                                              initialZoom: 13.0,
+                                              onMapReady: () {
+                                                _centerOnUser();
+                                              },
+                                            ),
+                                            children: [
+                                              TileLayer(
+                                                urlTemplate:
+                                                    'https://api.mapbox.com/styles/v1/mapbox/streets-v11/tiles/{z}/{x}/{y}?access_token=$mapboxAccessToken',
+                                                additionalOptions: {
+                                                  'accessToken':
+                                                      mapboxAccessToken!,
+                                                },
+                                              ),
+                                              MarkerLayer(
+                                                markers: [
+                                                  ...mapPinsRecordList
+                                                      .map((mapPinsRecord) {
+                                                        return mapPinsRecord
+                                                                .hasLocation()
+                                                            ? Marker(
+                                                                width: 50.0,
+                                                                height: 50.0,
+                                                                point: latlong
+                                                                    .LatLng(
+                                                                  mapPinsRecord
+                                                                      .location!
+                                                                      .latitude,
+                                                                  mapPinsRecord
+                                                                      .location!
+                                                                      .longitude,
+                                                                ),
+                                                                child:
+                                                                    GestureDetector(
+                                                                  onTap: () {
+                                                                    _showPinDetails(
+                                                                        context,
+                                                                        mapPinsRecord,
+                                                                        userLoc);
+                                                                  },
+                                                                  child: MapUtils
+                                                                      .getMarkerIcon(
+                                                                          mapPinsRecord
+                                                                              .iconType),
+                                                                ),
+                                                              )
+                                                            : null;
+                                                      })
+                                                      .where((marker) =>
+                                                          marker != null)
+                                                      .cast<Marker>()
+                                                      .toList(),
+                                                ],
+                                              ),
+                                              if (_routePoints != null)
+                                                PolylineLayer(
+                                                  polylines: [
+                                                    Polyline(
+                                                      points: _routePoints!,
+                                                      strokeWidth: 5,
+                                                      color: Colors.blueAccent,
+                                                    ),
+                                                  ],
+                                                ),
+                                              CurrentLocationLayer(
+                                                style: LocationMarkerStyle(
+                                                  marker: DefaultLocationMarker(
+                                                    color: Colors.blue,
+                                                    child: Transform.rotate(
+                                                      angle: currentHeading *
+                                                          (pi / 180),
+                                                      child: Icon(
+                                                        Icons.navigation,
+                                                        color: Colors.white,
+                                                        size: 16,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  markerSize:
+                                                      const Size(40, 40),
+                                                  accuracyCircleColor: Colors
+                                                      .blue
+                                                      .withOpacity(0.1),
+                                                  headingSectorColor: Colors
+                                                      .blue
+                                                      .withOpacity(0.25),
+                                                  headingSectorRadius: 120,
+                                                ),
+                                                alignPositionOnUpdate:
+                                                    AlignOnUpdate.never,
+                                                alignDirectionOnUpdate:
+                                                    AlignOnUpdate.never,
+                                              ),
+                                            ],
+                                          ),
+                                          DraggableScrollableSheet(
+                                            initialChildSize: 0.15,
+                                            minChildSize: 0.15,
+                                            maxChildSize: 0.6,
+                                            builder: (BuildContext context,
+                                                ScrollController
+                                                    scrollController) {
+                                              return Container(
+                                                decoration: BoxDecoration(
+                                                  color: FlutterFlowTheme.of(
+                                                          context)
+                                                      .secondaryBackground,
+                                                  borderRadius:
+                                                      const BorderRadius
+                                                          .vertical(
+                                                          top: Radius.circular(
+                                                              20)),
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      blurRadius: 10,
+                                                      color: Colors.black
+                                                          .withOpacity(0.1),
+                                                      spreadRadius: 2,
+                                                    )
+                                                  ],
+                                                ),
+                                                child: Column(
+                                                  children: [
+                                                    Center(
+                                                      child: Container(
+                                                        margin: const EdgeInsets
+                                                            .symmetric(
+                                                            vertical: 12),
+                                                        width: 40,
+                                                        height: 4,
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          color: FlutterFlowTheme
+                                                                  .of(context)
+                                                              .alternate,
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(2),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    Padding(
+                                                      padding:
+                                                          const EdgeInsets.only(
+                                                              bottom: 12.0),
+                                                      child: Text(
+                                                        'LOCATIONS',
+                                                        style:
+                                                            FlutterFlowTheme.of(
+                                                                    context)
+                                                                .labelMedium
+                                                                .override(
+                                                                  fontFamily:
+                                                                      'Inter',
+                                                                  letterSpacing:
+                                                                      1.5,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                ),
+                                                      ),
+                                                    ),
+                                                    Expanded(
+                                                      child: ListView.separated(
+                                                        controller:
+                                                            scrollController,
+                                                        padding:
+                                                            EdgeInsets.zero,
+                                                        itemCount:
+                                                            mapPinsRecordList
+                                                                .length,
+                                                        separatorBuilder: (context,
+                                                                index) =>
+                                                            Divider(
+                                                                height: 1,
+                                                                color: FlutterFlowTheme.of(
+                                                                        context)
+                                                                    .alternate),
+                                                        itemBuilder:
+                                                            (context, index) {
+                                                          final record =
+                                                              mapPinsRecordList[
+                                                                  index];
+                                                          final dist = userLoc !=
+                                                                      null &&
+                                                                  record
+                                                                      .hasLocation()
+                                                              ? (Geolocator
+                                                                          .distanceBetween(
+                                                                        userLoc
+                                                                            .latitude,
+                                                                        userLoc
+                                                                            .longitude,
+                                                                        record
+                                                                            .location!
+                                                                            .latitude,
+                                                                        record
+                                                                            .location!
+                                                                            .longitude,
+                                                                      ) /
+                                                                      1000)
+                                                                  .toStringAsFixed(
+                                                                      1)
+                                                              : null;
+
+                                                          return ListTile(
+                                                            leading: Column(
+                                                              mainAxisAlignment:
+                                                                  MainAxisAlignment
+                                                                      .center,
+                                                              children: [
+                                                                MapUtils.getMarkerIcon(
+                                                                    record
+                                                                        .iconType,
+                                                                    size: 30),
+                                                              ],
+                                                            ),
+                                                            title: Text(
+                                                              record.name,
+                                                              style: FlutterFlowTheme
+                                                                      .of(context)
+                                                                  .bodyLarge
+                                                                  .override(
+                                                                    fontFamily:
+                                                                        'Inter',
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w600,
+                                                                  ),
+                                                            ),
+                                                            subtitle:
+                                                                dist != null
+                                                                    ? Text(
+                                                                        '$dist km',
+                                                                        style: FlutterFlowTheme.of(context)
+                                                                            .bodySmall,
+                                                                      )
+                                                                    : null,
+                                                            onTap: () {
+                                                              if (record
+                                                                  .hasLocation()) {
+                                                                _mapController.move(
+                                                                    latlong.LatLng(
+                                                                        record
+                                                                            .location!
+                                                                            .latitude,
+                                                                        record
+                                                                            .location!
+                                                                            .longitude),
+                                                                    15);
+                                                              }
+                                                            },
+                                                            trailing:
+                                                                IconButton(
+                                                              icon: const Icon(
+                                                                  Icons
+                                                                      .navigation),
+                                                              color: FlutterFlowTheme
+                                                                      .of(context)
+                                                                  .primary,
+                                                              onPressed: () {
+                                                                _startNavigation(
+                                                                    record);
+                                                              },
+                                                            ),
+                                                          );
+                                                        },
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
+                  ),
+                ],
+              ),
+              Align(
+                alignment: const AlignmentDirectional(0.9, 0.9),
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(
+                      0.0, 0.0, 0.0, 100.0),
+                  child: FloatingActionButton(
+                    heroTag: 'centerSlachtoffer',
+                    onPressed: () async {
+                      await _centerOnUser();
+                    },
+                    backgroundColor: FlutterFlowTheme.of(context).primary,
+                    elevation: 8.0,
+                    child: Icon(
+                      Icons.my_location,
+                      color: FlutterFlowTheme.of(context).info,
+                      size: 24.0,
+                    ),
+                  ),
+                ),
+              ),
+              if (_routeTargetName != null)
+                Align(
+                  alignment: const AlignmentDirectional(0.0, -0.95),
+                  child: NavigationBanner(
+                    targetName: _routeTargetName!,
+                    isCalculating: _isFetchingRoute,
+                    etaText: _routeEtaText,
+                    onClose: _clearRoute,
+                  ),
+                ),
+            ],
           ),
         ),
       ),
+    );
+  }
+
+  void _showPinDetails(
+      BuildContext context, MapPinsRecord record, latlong.LatLng? userLoc) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        final dist = userLoc != null && record.hasLocation()
+            ? (Geolocator.distanceBetween(
+                      userLoc.latitude,
+                      userLoc.longitude,
+                      record.location!.latitude,
+                      record.location!.longitude,
+                    ) /
+                    1000)
+                .toStringAsFixed(1)
+            : null;
+
+        return Container(
+          padding: const EdgeInsets.all(24),
+          color: FlutterFlowTheme.of(context).secondaryBackground,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                record.name,
+                style: FlutterFlowTheme.of(context).headlineMedium,
+              ),
+              const SizedBox(height: 8),
+              if (dist != null)
+                Text(
+                  '$dist km away',
+                  style: FlutterFlowTheme.of(context).bodyMedium.override(
+                        fontFamily: 'Inter',
+                        color: FlutterFlowTheme.of(context).secondaryText,
+                      ),
+                ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
     );
   }
 }

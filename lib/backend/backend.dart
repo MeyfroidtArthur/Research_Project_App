@@ -12,6 +12,7 @@ import 'schema/connection_record.dart';
 import 'schema/chats_record.dart';
 import 'schema/interventie_record.dart';
 import 'schema/messages_record.dart';
+import 'schema/map_pins_record.dart';
 
 export 'dart:async' show StreamSubscription;
 export 'package:cloud_firestore/cloud_firestore.dart' hide Order;
@@ -27,6 +28,44 @@ export 'schema/connection_record.dart';
 export 'schema/chats_record.dart';
 export 'schema/interventie_record.dart';
 export 'schema/messages_record.dart';
+export 'schema/map_pins_record.dart';
+
+/// Functions to query MapPinsRecords (as a Stream and as a Future).
+Future<int> queryMapPinsRecordCount({
+  Query Function(Query)? queryBuilder,
+  int limit = -1,
+}) =>
+    queryCollectionCount(
+      MapPinsRecord.collection,
+      queryBuilder: queryBuilder,
+      limit: limit,
+    );
+
+Stream<List<MapPinsRecord>> queryMapPinsRecord({
+  Query Function(Query)? queryBuilder,
+  int limit = -1,
+  bool singleRecord = false,
+}) =>
+    queryCollection(
+      MapPinsRecord.collection,
+      MapPinsRecord.fromSnapshot,
+      queryBuilder: queryBuilder,
+      limit: limit,
+      singleRecord: singleRecord,
+    );
+
+Future<List<MapPinsRecord>> queryMapPinsRecordOnce({
+  Query Function(Query)? queryBuilder,
+  int limit = -1,
+  bool singleRecord = false,
+}) =>
+    queryCollectionOnce(
+      MapPinsRecord.collection,
+      MapPinsRecord.fromSnapshot,
+      queryBuilder: queryBuilder,
+      limit: limit,
+      singleRecord: singleRecord,
+    );
 
 /// Functions to query EventRecords (as a Stream and as a Future).
 Future<int> queryEventRecordCount({

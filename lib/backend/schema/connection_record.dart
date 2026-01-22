@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:collection/collection.dart';
 
 import '/backend/schema/util/firestore_util.dart';
@@ -76,10 +77,22 @@ class ConnectionRecord extends FirestoreRecord {
   DocumentReference? get eventId => _eventId;
   bool hasEventId() => _eventId != null;
 
+  // "Location" field.
+  LatLng? _location;
+  LatLng? get location => _location;
+  bool hasLocation() => _location != null;
+
+  // "LastLocationUpdate" field.
+  DateTime? _lastLocationUpdate;
+  DateTime? get lastLocationUpdate => _lastLocationUpdate;
+  bool hasLastLocationUpdate() => _lastLocationUpdate != null;
+
   void _initializeFields() {
     _voornaam = snapshotData['voornaam'] as String?;
     _achternaam = snapshotData['achternaam'] as String?;
-    _geboortedatum = snapshotData['geboortedatum'] as DateTime?;
+    _geboortedatum = snapshotData['geboortedatum'] is Timestamp
+        ? (snapshotData['geboortedatum'] as Timestamp).toDate()
+        : snapshotData['geboortedatum'] as DateTime?;
     _gender = snapshotData['gender'] as String?;
     _adres = snapshotData['adres'] as String?;
     _gemeente = snapshotData['gemeente'] as String?;
@@ -90,7 +103,15 @@ class ConnectionRecord extends FirestoreRecord {
         ? snapshotData['status']
         : deserializeEnum<Statuscall>(snapshotData['status']);
     _ermergencyLevel = castToType<int>(snapshotData['ermergencyLevel']);
-    _eventId = snapshotData['eventId'] as DocumentReference?;
+    _eventId = snapshotData['eventId'] is DocumentReference
+        ? snapshotData['eventId'] as DocumentReference?
+        : snapshotData['eventId'] is String
+            ? FirebaseFirestore.instance.doc(snapshotData['eventId'] as String)
+            : null;
+    _location = snapshotData['Location'] as LatLng?;
+    _lastLocationUpdate = snapshotData['LastLocationUpdate'] is Timestamp
+        ? (snapshotData['LastLocationUpdate'] as Timestamp).toDate()
+        : snapshotData['LastLocationUpdate'] as DateTime?;
   }
 
   static CollectionReference get collection =>
@@ -140,6 +161,8 @@ Map<String, dynamic> createConnectionRecordData({
   Statuscall? status,
   int? ermergencyLevel,
   DocumentReference? eventId,
+  LatLng? location,
+  DateTime? lastLocationUpdate,
 }) {
   final firestoreData = mapToFirestore(
     <String, dynamic>{
@@ -155,6 +178,8 @@ Map<String, dynamic> createConnectionRecordData({
       'status': status,
       'ermergencyLevel': ermergencyLevel,
       'eventId': eventId,
+      'Location': location,
+      'LastLocationUpdate': lastLocationUpdate,
     }.withoutNulls,
   );
 
@@ -177,7 +202,9 @@ class ConnectionRecordDocumentEquality implements Equality<ConnectionRecord> {
         e1?.emergencyContact == e2?.emergencyContact &&
         e1?.status == e2?.status &&
         e1?.ermergencyLevel == e2?.ermergencyLevel &&
-        e1?.eventId == e2?.eventId;
+        e1?.eventId == e2?.eventId &&
+        e1?.location == e2?.location &&
+        e1?.lastLocationUpdate == e2?.lastLocationUpdate;
   }
 
   @override
@@ -193,7 +220,9 @@ class ConnectionRecordDocumentEquality implements Equality<ConnectionRecord> {
         e?.emergencyContact,
         e?.status,
         e?.ermergencyLevel,
-        e?.eventId
+        e?.eventId,
+        e?.location,
+        e?.lastLocationUpdate
       ]);
 
   @override

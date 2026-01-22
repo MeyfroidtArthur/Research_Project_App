@@ -1,5 +1,6 @@
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
@@ -9,10 +10,13 @@ import 'auth/firebase_auth/auth_util.dart';
 import 'backend/firebase/firebase_config.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import 'flutter_flow/flutter_flow_util.dart';
+import '/services/background_location_service.dart';
+import '/services/notification_service.dart';
 import 'index.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
   GoRouter.optionURLReflectsImperativeAPIs = true;
   usePathUrlStrategy();
 
@@ -23,9 +27,16 @@ void main() async {
 
   await FlutterFlowTheme.initialize();
 
+  // Initialize notification service
+  await NotificationService.init();
+
+  // Initialize background location service
+  final locationService = BackgroundLocationService();
+  await locationService.initialize();
+
   final appState = FFAppState(); // Initialize FFAppState
   await appState.initializePersistedState();
-
+  await initHighPriorityNotifications();
   runApp(ChangeNotifierProvider(
     create: (context) => appState,
     child: MyApp(),

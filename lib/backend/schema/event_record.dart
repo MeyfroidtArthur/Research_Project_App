@@ -25,6 +25,11 @@ class EventRecord extends FirestoreRecord {
   String get locatie => _locatie ?? '';
   bool hasLocatie() => _locatie != null;
 
+  // "LocationCoordinates" field.
+  LatLng? _locationCoordinates;
+  LatLng? get locationCoordinates => _locationCoordinates;
+  bool hasLocationCoordinates() => _locationCoordinates != null;
+
   // "CreatedBy" field.
   String? _createdBy;
   String get createdBy => _createdBy ?? '';
@@ -58,6 +63,7 @@ class EventRecord extends FirestoreRecord {
   void _initializeFields() {
     _naam = snapshotData['Naam'] as String?;
     _locatie = snapshotData['Locatie'] as String?;
+    _locationCoordinates = snapshotData['LocationCoordinates'] as LatLng?;
     _createdBy = snapshotData['CreatedBy'] as String?;
     _startTime = snapshotData['StartTime'] as DateTime?;
     _endTime = snapshotData['EndTime'] as DateTime?;
@@ -102,6 +108,7 @@ class EventRecord extends FirestoreRecord {
 Map<String, dynamic> createEventRecordData({
   String? naam,
   String? locatie,
+  LatLng? locationCoordinates,
   String? createdBy,
   DateTime? startTime,
   DateTime? endTime,
@@ -113,6 +120,7 @@ Map<String, dynamic> createEventRecordData({
     <String, dynamic>{
       'Naam': naam,
       'Locatie': locatie,
+      'LocationCoordinates': locationCoordinates,
       'CreatedBy': createdBy,
       'StartTime': startTime,
       'EndTime': endTime,
@@ -132,6 +140,7 @@ class EventRecordDocumentEquality implements Equality<EventRecord> {
   bool equals(EventRecord? e1, EventRecord? e2) {
     return e1?.naam == e2?.naam &&
         e1?.locatie == e2?.locatie &&
+        e1?.locationCoordinates == e2?.locationCoordinates &&
         e1?.createdBy == e2?.createdBy &&
         e1?.startTime == e2?.startTime &&
         e1?.endTime == e2?.endTime &&
@@ -144,6 +153,7 @@ class EventRecordDocumentEquality implements Equality<EventRecord> {
   int hash(EventRecord? e) => const ListEquality().hash([
         e?.naam,
         e?.locatie,
+        e?.locationCoordinates,
         e?.createdBy,
         e?.startTime,
         e?.endTime,

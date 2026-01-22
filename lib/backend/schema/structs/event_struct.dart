@@ -10,6 +10,7 @@ class EventStruct extends FFFirebaseStruct {
   EventStruct({
     String? naam,
     String? locatie,
+    LatLng? locationCoordinates,
     String? code,
     DateTime? start,
     DateTime? end,
@@ -17,6 +18,7 @@ class EventStruct extends FFFirebaseStruct {
     FirestoreUtilData firestoreUtilData = const FirestoreUtilData(),
   })  : _naam = naam,
         _locatie = locatie,
+        _locationCoordinates = locationCoordinates,
         _code = code,
         _start = start,
         _end = end,
@@ -36,6 +38,13 @@ class EventStruct extends FFFirebaseStruct {
   set locatie(String? val) => _locatie = val;
 
   bool hasLocatie() => _locatie != null;
+
+  // "LocationCoordinates" field.
+  LatLng? _locationCoordinates;
+  LatLng? get locationCoordinates => _locationCoordinates;
+  set locationCoordinates(LatLng? val) => _locationCoordinates = val;
+
+  bool hasLocationCoordinates() => _locationCoordinates != null;
 
   // "Code" field.
   String? _code;
@@ -68,6 +77,7 @@ class EventStruct extends FFFirebaseStruct {
   static EventStruct fromMap(Map<String, dynamic> data) => EventStruct(
         naam: data['Naam'] as String?,
         locatie: data['Locatie'] as String?,
+        locationCoordinates: data['LocationCoordinates'] as LatLng?,
         code: data['Code'] as String?,
         start: data['Start'] as DateTime?,
         end: data['End'] as DateTime?,
@@ -80,6 +90,7 @@ class EventStruct extends FFFirebaseStruct {
   Map<String, dynamic> toMap() => {
         'Naam': _naam,
         'Locatie': _locatie,
+        'LocationCoordinates': _locationCoordinates,
         'Code': _code,
         'Start': _start,
         'End': _end,
@@ -95,6 +106,10 @@ class EventStruct extends FFFirebaseStruct {
         'Locatie': serializeParam(
           _locatie,
           ParamType.String,
+        ),
+        'LocationCoordinates': serializeParam(
+          _locationCoordinates,
+          ParamType.LatLng,
         ),
         'Code': serializeParam(
           _code,
@@ -124,6 +139,11 @@ class EventStruct extends FFFirebaseStruct {
         locatie: deserializeParam(
           data['Locatie'],
           ParamType.String,
+          false,
+        ),
+        locationCoordinates: deserializeParam(
+          data['LocationCoordinates'],
+          ParamType.LatLng,
           false,
         ),
         code: deserializeParam(
@@ -157,6 +177,7 @@ class EventStruct extends FFFirebaseStruct {
     return other is EventStruct &&
         naam == other.naam &&
         locatie == other.locatie &&
+        locationCoordinates == other.locationCoordinates &&
         code == other.code &&
         start == other.start &&
         end == other.end &&
@@ -164,13 +185,14 @@ class EventStruct extends FFFirebaseStruct {
   }
 
   @override
-  int get hashCode =>
-      const ListEquality().hash([naam, locatie, code, start, end, id]);
+  int get hashCode => const ListEquality()
+      .hash([naam, locatie, locationCoordinates, code, start, end, id]);
 }
 
 EventStruct createEventStruct({
   String? naam,
   String? locatie,
+  LatLng? locationCoordinates,
   String? code,
   DateTime? start,
   DateTime? end,
@@ -183,6 +205,7 @@ EventStruct createEventStruct({
     EventStruct(
       naam: naam,
       locatie: locatie,
+      locationCoordinates: locationCoordinates,
       code: code,
       start: start,
       end: end,

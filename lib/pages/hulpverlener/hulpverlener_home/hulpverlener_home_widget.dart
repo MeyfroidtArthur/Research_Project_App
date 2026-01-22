@@ -9,10 +9,12 @@ import '/flutter_flow/flutter_flow_widgets.dart';
 import '/flutter_flow/form_field_controller.dart';
 import '/flutter_flow/custom_functions.dart' as functions;
 import '/index.dart';
+import '/services/background_location_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:geolocator/geolocator.dart';
 import 'hulpverlener_home_model.dart';
 export 'hulpverlener_home_model.dart';
 
@@ -28,6 +30,8 @@ class HulpverlenerHomeWidget extends StatefulWidget {
 
 class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
   late HulpverlenerHomeModel _model;
+  final _locationService = BackgroundLocationService();
+  bool _serviceInitialized = false;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -35,6 +39,67 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
   void initState() {
     super.initState();
     _model = createModel(context, () => HulpverlenerHomeModel());
+    _initializeLocationService();
+  }
+
+  Future<void> _initializeLocationService() async {
+    try {
+      await _locationService.initialize();
+      _serviceInitialized = true;
+    } catch (e) {
+      print('Failed to initialize location service: $e');
+    }
+  }
+
+  Future<bool> _requestLocationPermissions() async {
+    try {
+      // Check if location services are enabled first
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Locatie diensten zijn uitgeschakeld')),
+          );
+        }
+        return false;
+      }
+
+      // Request location permission
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Locatie toegang geweigerd')),
+            );
+          }
+          return false;
+        }
+      }
+
+      // If permission is denied forever
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(
+                    'Locatie toegang permanent geweigerd. Schakel in via instellingen.')),
+          );
+        }
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      print('Error requesting location permissions: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Fout bij aanvraag locatie: $e')),
+        );
+      }
+      return false;
+    }
   }
 
   @override
@@ -75,6 +140,9 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
                 hoverColor: Colors.transparent,
                 highlightColor: Colors.transparent,
                 onTap: () async {
+                  // Stop location tracking before logout
+                  await _locationService.stopTracking();
+
                   context.pushNamed(
                     SignUpWidget.routeName,
                     extra: <String, dynamic>{
@@ -209,6 +277,9 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
                                         safeSetState(
                                             () => _model.dropDownValue = val);
                                         if (FFAppState().TeamId != null) {
+                                          // Stop location tracking for previous team
+                                          await _locationService.stopTracking();
+
                                           await FFAppState()
                                               .TeamId!
                                               .update(createTeamsRecordData(
@@ -236,6 +307,62 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
                                         FFAppState().TeamLabel =
                                             _model.team!.naam;
                                         safeSetState(() {});
+
+                                        // Request location permissions and start tracking
+                                        if (_serviceInitialized) {
+                                          final hasPermission =
+                                              await _requestLocationPermissions();
+                                          if (hasPermission) {
+                                            // Show loading indicator
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                    'Locatie tracking wordt gestart...'),
+                                                duration: Duration(seconds: 2),
+                                              ),
+                                            );
+
+                                            // Start background location tracking
+                                            try {
+                                              await _locationService
+                                                  .startTracking(FFAppState()
+                                                      .TeamId!
+                                                      .path);
+
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                      'Locatie tracking actief voor ${_model.team!.naam}'),
+                                                  backgroundColor: Colors.green,
+                                                  duration:
+                                                      Duration(seconds: 3),
+                                                ),
+                                              );
+                                            } catch (e) {
+                                              print(
+                                                  'Failed to start tracking: $e');
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                      'Fout bij starten locatie tracking'),
+                                                  backgroundColor: Colors.red,
+                                                ),
+                                              );
+                                            }
+                                          }
+                                        } else {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                  'Locatie service wordt geïnitialiseerd...'),
+                                              duration: Duration(seconds: 2),
+                                            ),
+                                          );
+                                        }
 
                                         safeSetState(() {});
                                       },
@@ -559,14 +686,18 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
                                                                 String>(
                                                               () {
                                                                 if (containerInterventieRecord
-                                                                            .slachtofferDetails
-                                                                            .voornaam !=
-                                                                        '') {
+                                                                        .slachtofferDetails
+                                                                        .voornaam !=
+                                                                    '') {
                                                                   return '${containerInterventieRecord.slachtofferDetails.voornaam} ${containerInterventieRecord.slachtofferDetails.achternaam}';
-                                                                } else if ((containerInterventieRecord.slachtofferDetails.voornaam ==
-                                                                            '') &&
-                                                                    (containerInterventieRecord.slachtofferDetails.achternaam !=
-                                                                            '')) {
+                                                                } else if ((containerInterventieRecord
+                                                                            .slachtofferDetails
+                                                                            .voornaam ==
+                                                                        '') &&
+                                                                    (containerInterventieRecord
+                                                                            .slachtofferDetails
+                                                                            .achternaam !=
+                                                                        '')) {
                                                                   return containerInterventieRecord
                                                                       .slachtofferDetails
                                                                       .achternaam;
@@ -603,9 +734,9 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
                                                                 ),
                                                           ),
                                                           if (containerInterventieRecord
-                                                                          .slachtofferDetails
-                                                                          .gender !=
-                                                                      ''
+                                                                      .slachtofferDetails
+                                                                      .gender !=
+                                                                  ''
                                                               ? true
                                                               : false)
                                                             Text(
@@ -638,9 +769,9 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
                                                                   ),
                                                             ),
                                                           if (containerInterventieRecord
-                                                                          .slachtofferDetails
-                                                                          .gender !=
-                                                                      ''
+                                                                      .slachtofferDetails
+                                                                      .gender !=
+                                                                  ''
                                                               ? true
                                                               : false)
                                                             Text(
@@ -682,11 +813,11 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
                                                             width: 4.0)),
                                                       ),
                                                       if (dateTimeFormat(
-                                                                  "dd-MM-yyyy",
-                                                                  containerInterventieRecord
-                                                                      .slachtofferDetails
-                                                                      .geboorteDatum) !=
-                                                              '')
+                                                              "dd-MM-yyyy",
+                                                              containerInterventieRecord
+                                                                  .slachtofferDetails
+                                                                  .geboorteDatum) !=
+                                                          '')
                                                         Text(
                                                           dateTimeFormat(
                                                               "dd-MM-yyyy",
@@ -722,9 +853,9 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
                                                               ),
                                                         ),
                                                       if (containerInterventieRecord
-                                                                  .slachtofferDetails
-                                                                  .extra !=
-                                                              '')
+                                                              .slachtofferDetails
+                                                              .extra !=
+                                                          '')
                                                         Text(
                                                           valueOrDefault<
                                                               String>(
@@ -762,9 +893,9 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
                                                               ),
                                                         ),
                                                       if (containerInterventieRecord
-                                                                  .slachtofferDetails
-                                                                  .noodcontact !=
-                                                              '')
+                                                              .slachtofferDetails
+                                                              .noodcontact !=
+                                                          '')
                                                         Text(
                                                           'Noodcontact: ${valueOrDefault<String>(
                                                             containerInterventieRecord

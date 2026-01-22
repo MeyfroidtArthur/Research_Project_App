@@ -1,0 +1,17 @@
+﻿Analyzing Research_Project_App...                               
+
+warning - The declaration '_safeInit' isn't referenced - lib\app_state.dart:164:6 - unused_element
+warning - The value of the field '_phoneAuthVerificationCode' isn't used - lib\auth\firebase_auth\firebase_auth_manager.dart:52:11 - unused_field
+warning - The value of the field '_webPhoneAuthConfirmationResult' isn't used - lib\auth\firebase_auth\firebase_auth_manager.dart:54:23 - unused_field
+warning - The method doesn't override an inherited method - lib\auth\firebase_auth\firebase_auth_manager.dart:107:10 - override_on_non_overriding_member
+   info - 'updateEmail' is deprecated and shouldn't be used. updateEmail() has been deprecated. Please use verifyBeforeUpdateEmail() instead - lib\auth\firebase_auth\firebase_user_provider.dart:28:19 - deprecated_member_use
+warning - This 'onError' handler must return a value assignable to 'AggregateQuerySnapshot', but ends without returning a value - lib\backend\backend.dart:307:47 - body_might_complete_normally_catch_error
+warning - The value of the local variable 'data' isn't used - lib\environment_values.dart:22:13 - unused_local_variable
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\flutter_flow\flutter_flow_drop_down.dart:189:7 - deprecated_member_use
+   info - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\flutter_flow\flutter_flow_radio_button.dart:208:7 - deprecated_member_use
+   info - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\flutter_flow\flutter_flow_radio_button.dart:209:7 - deprecated_member_use
+warning - This default clause is covered by the previous cases - lib\flutter_flow\nav\serialization_util.dart:98:7 - unreachable_switch_default
+warning - Dead code - lib\pages\auth\sign_up\sign_up_widget.dart:423:56 - dead_code
+   info - The import of '/backend/schema/structs/index.dart' is unnecessary because all of the used elements are also provided by the import of '/backend/backend.dart' - lib\pages\hulpverlener\map\map_widget.dart:2:8 - unnecessary_import
+   info - The import of '/backend/schema/structs/index.dart' is unnecessary because all of the used elements are also provided by the import of '/backend/backend.dart' - lib\pages\slachtoffer\slachtoffer_map\slachtoffer_map_widget.dart:2:8 - unnecessary_import
+

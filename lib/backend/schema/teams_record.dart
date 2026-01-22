@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:collection/collection.dart';
 
 import '/backend/schema/util/firestore_util.dart';
@@ -41,6 +42,16 @@ class TeamsRecord extends FirestoreRecord {
   DocumentReference? get eventId => _eventId;
   bool hasEventId() => _eventId != null;
 
+  // "Location" field.
+  LatLng? _location;
+  LatLng? get location => _location;
+  bool hasLocation() => _location != null;
+
+  // "LastLocationUpdate" field.
+  DateTime? _lastLocationUpdate;
+  DateTime? get lastLocationUpdate => _lastLocationUpdate;
+  bool hasLastLocationUpdate() => _lastLocationUpdate != null;
+
   void _initializeFields() {
     _naam = snapshotData['Naam'] as String?;
     _prefix = snapshotData['Prefix'] as String?;
@@ -49,6 +60,10 @@ class TeamsRecord extends FirestoreRecord {
         ? snapshotData['Status']
         : deserializeEnum<TeamStatus>(snapshotData['Status']);
     _eventId = snapshotData['EventId'] as DocumentReference?;
+    _location = snapshotData['Location'] as LatLng?;
+    _lastLocationUpdate = snapshotData['LastLocationUpdate'] is Timestamp
+        ? (snapshotData['LastLocationUpdate'] as Timestamp).toDate()
+        : snapshotData['LastLocationUpdate'] as DateTime?;
   }
 
   static CollectionReference get collection =>
@@ -90,6 +105,8 @@ Map<String, dynamic> createTeamsRecordData({
   String? locatie,
   TeamStatus? status,
   DocumentReference? eventId,
+  LatLng? location,
+  DateTime? lastLocationUpdate,
 }) {
   final firestoreData = mapToFirestore(
     <String, dynamic>{
@@ -98,6 +115,8 @@ Map<String, dynamic> createTeamsRecordData({
       'Locatie': locatie,
       'Status': status,
       'EventId': eventId,
+      'Location': location,
+      'LastLocationUpdate': lastLocationUpdate,
     }.withoutNulls,
   );
 
@@ -113,12 +132,21 @@ class TeamsRecordDocumentEquality implements Equality<TeamsRecord> {
         e1?.prefix == e2?.prefix &&
         e1?.locatie == e2?.locatie &&
         e1?.status == e2?.status &&
-        e1?.eventId == e2?.eventId;
+        e1?.eventId == e2?.eventId &&
+        e1?.location == e2?.location &&
+        e1?.lastLocationUpdate == e2?.lastLocationUpdate;
   }
 
   @override
-  int hash(TeamsRecord? e) => const ListEquality()
-      .hash([e?.naam, e?.prefix, e?.locatie, e?.status, e?.eventId]);
+  int hash(TeamsRecord? e) => const ListEquality().hash([
+        e?.naam,
+        e?.prefix,
+        e?.locatie,
+        e?.status,
+        e?.eventId,
+        e?.location,
+        e?.lastLocationUpdate
+      ]);
 
   @override
   bool isValidKey(Object? o) => o is TeamsRecord;
