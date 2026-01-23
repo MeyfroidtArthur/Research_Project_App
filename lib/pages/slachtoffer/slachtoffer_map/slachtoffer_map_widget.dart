@@ -28,6 +28,12 @@ class SlachtofferMapWidget extends StatefulWidget {
 
   static String routeName = 'SlachtofferMap';
   static String routePath = '/slachtofferMap';
+  
+  // Static flags for navigation
+  static bool shouldStartNavigationToRedCross = false;
+  static double? targetRedCrossLat;
+  static double? targetRedCrossLng;
+  static String? targetRedCrossName;
 
   @override
   State<SlachtofferMapWidget> createState() => _SlachtofferMapWidgetState();
@@ -59,7 +65,29 @@ class _SlachtofferMapWidgetState extends State<SlachtofferMapWidget> {
     _loadMapboxRx();
     _startLocationUpdates();
     _startCompassUpdates();
+    
+    // Check if we should auto-start navigation to Red Cross
+    if (SlachtofferMapWidget.shouldStartNavigationToRedCross) {
+      SlachtofferMapWidget.shouldStartNavigationToRedCross = false; // Reset flag
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && 
+            SlachtofferMapWidget.targetRedCrossLat != null && 
+            SlachtofferMapWidget.targetRedCrossLng != null) {
+          _startNavigationWithCoords(
+            SlachtofferMapWidget.targetRedCrossLat!,
+            SlachtofferMapWidget.targetRedCrossLng!,
+            SlachtofferMapWidget.targetRedCrossName ?? 'Red Cross Post',
+          );
+          // Clear the static variables
+          SlachtofferMapWidget.targetRedCrossLat = null;
+          SlachtofferMapWidget.targetRedCrossLng = null;
+          SlachtofferMapWidget.targetRedCrossName = null;
+        }
+      });
+    }
   }
+
+
 
   double currentHeading = 0.0;
 
@@ -172,27 +200,42 @@ class _SlachtofferMapWidgetState extends State<SlachtofferMapWidget> {
 
   Future<void> _startNavigation(MapPinsRecord record) async {
     if (!record.hasLocation()) return;
+    _startNavigationWithCoords(
+      record.location!.latitude,
+      record.location!.longitude,
+      record.name,
+    );
+  }
 
-    final userLoc = currentUserLocation;
+  Future<void> _startNavigationWithCoords(double lat, double lng, String name) async {
+    // Wait for location to be available (retry up to 5 times with 500ms delay)
+    latlong.LatLng? userLoc = currentUserLocation;
+    int retries = 0;
+    
+    while (userLoc == null && retries < 5) {
+      await Future.delayed(const Duration(milliseconds: 500));
+      userLoc = currentUserLocation;
+      retries++;
+    }
+    
     if (userLoc == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Waiting for your location...')),
-      );
-      await _centerOnUser();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Waiting for your location...')),
+        );
+        await _centerOnUser();
+      }
       return;
     }
 
     setState(() {
       _isFetchingRoute = true;
-      _routeTargetName = record.name;
+      _routeTargetName = name;
       _routePoints = null;
       _routeEtaText = null;
     });
 
-    final destination = latlong.LatLng(
-      record.location!.latitude,
-      record.location!.longitude,
-    );
+    final destination = latlong.LatLng(lat, lng);
 
     final result = await _fetchRoute(userLoc, destination);
 
@@ -636,8 +679,6 @@ class _SlachtofferMapWidgetState extends State<SlachtofferMapWidget> {
                                                     ),
                                                     Expanded(
                                                       child: ListView.separated(
-                                                        controller:
-                                                            scrollController,
                                                         padding:
                                                             EdgeInsets.zero,
                                                         itemCount:

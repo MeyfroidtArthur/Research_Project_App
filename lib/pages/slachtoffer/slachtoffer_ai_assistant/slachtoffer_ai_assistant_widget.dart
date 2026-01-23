@@ -131,10 +131,10 @@ class _SlachtofferAIAssistantWidgetState
         if (pin.hasLocation()) {
           final lat = pin.latitude;
           final lng = pin.longitude;
-          
+
           // Calculate distance using Haversine formula
           final distance = _calculateDistance(userLat, userLng, lat, lng);
-          
+
           if (distance < nearestDistance) {
             nearestDistance = distance;
             nearest = pin;
@@ -149,12 +149,16 @@ class _SlachtofferAIAssistantWidgetState
     }
   }
 
-  double _calculateDistance(double lat1, double lng1, double lat2, double lng2) {
+  double _calculateDistance(
+      double lat1, double lng1, double lat2, double lng2) {
     const double earthRadiusKm = 6371;
     final double dLat = _toRadian(lat2 - lat1);
     final double dLng = _toRadian(lng2 - lng1);
     final double a = sqrt(sin(dLat / 2) * sin(dLat / 2) +
-        cos(_toRadian(lat1)) * cos(_toRadian(lat2)) * sin(dLng / 2) * sin(dLng / 2));
+        cos(_toRadian(lat1)) *
+            cos(_toRadian(lat2)) *
+            sin(dLng / 2) *
+            sin(dLng / 2));
     final double c = 2 * atan2(sqrt(a), sqrt(1 - a));
     return earthRadiusKm * c;
   }
@@ -294,29 +298,86 @@ class _SlachtofferAIAssistantWidgetState
           if (mounted) {
             // Find nearest Red Cross location
             final nearestRedCross = await _getNearestRedCross();
-            
+
             if (nearestRedCross != null) {
-              // Navigate to map with the nearest Red Cross as target
-              context.pushNamed(
-                SlachtofferMapWidget.routeName,
-                extra: <String, dynamic>{
-                  'targetPin': nearestRedCross,
-                  kTransitionInfoKey: TransitionInfo(
-                    hasTransition: true,
-                    transitionType: PageTransitionType.fade,
-                    duration: Duration(milliseconds: 200),
-                  ),
+              // Ask user before navigating
+              bool? shouldNavigate = await showDialog<bool>(
+                context: context,
+                builder: (alertDialogContext) {
+                  return AlertDialog(
+                    backgroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20.0),
+                    ),
+                    title: const Text(
+                      'Navigate to Red Cross?',
+                      style: TextStyle(
+                          color: Colors.black, fontWeight: FontWeight.bold),
+                    ),
+                    content: Text(
+                      'I found the nearest Red Cross First Aid post: ${nearestRedCross.name}. Would you like to navigate there on the map?',
+                      style: const TextStyle(color: Colors.black),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () =>
+                            Navigator.pop(alertDialogContext, false),
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          side: BorderSide(
+                            color: FlutterFlowTheme.of(context).primary,
+                            width: 1.0,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(
+                            color: FlutterFlowTheme.of(context).primary,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(alertDialogContext, true),
+                        style: TextButton.styleFrom(
+                          backgroundColor: FlutterFlowTheme.of(context).primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                        ),
+                        child: const Text(
+                          'Navigate',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
                 },
               );
-              
-              // Add AI response confirming navigation
-              if (mounted) {
-                setState(() {
-                  _model.chatHistory.insert(0, {
-                    'sender': 'ai',
-                    'message': 'I found the nearest Red Cross First Aid post: ${nearestRedCross.name}. Navigating you there now on the map!'
-                  });
-                });
+
+              if (shouldNavigate == true && mounted) {
+                // Set static flags for navigation
+                SlachtofferMapWidget.shouldStartNavigationToRedCross = true;
+                SlachtofferMapWidget.targetRedCrossLat = nearestRedCross.latitude;
+                SlachtofferMapWidget.targetRedCrossLng = nearestRedCross.longitude;
+                SlachtofferMapWidget.targetRedCrossName = nearestRedCross.name;
+                
+                // Navigate to map
+                context.pushNamed(
+                  SlachtofferMapWidget.routeName,
+                  extra: <String, dynamic>{
+                    kTransitionInfoKey: TransitionInfo(
+                      hasTransition: true,
+                      transitionType: PageTransitionType.fade,
+                      duration: Duration(milliseconds: 200),
+                    ),
+                  },
+                );
               }
             } else {
               // Show dialog if no Red Cross found
@@ -339,7 +400,8 @@ class _SlachtofferAIAssistantWidgetState
                     ),
                     actions: [
                       TextButton(
-                        onPressed: () => Navigator.pop(alertDialogContext, false),
+                        onPressed: () =>
+                            Navigator.pop(alertDialogContext, false),
                         style: TextButton.styleFrom(
                           backgroundColor: Colors.white,
                           side: BorderSide(
@@ -358,7 +420,8 @@ class _SlachtofferAIAssistantWidgetState
                         ),
                       ),
                       TextButton(
-                        onPressed: () => Navigator.pop(alertDialogContext, true),
+                        onPressed: () =>
+                            Navigator.pop(alertDialogContext, true),
                         style: TextButton.styleFrom(
                           backgroundColor: FlutterFlowTheme.of(context).primary,
                           shape: RoundedRectangleBorder(
