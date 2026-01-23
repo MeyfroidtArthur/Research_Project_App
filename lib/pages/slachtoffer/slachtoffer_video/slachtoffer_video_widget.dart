@@ -2,7 +2,6 @@ import '/backend/backend.dart';
 import '/backend/schema/enums/enums.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
-import '/flutter_flow/flutter_flow_widgets.dart';
 import '/index.dart';
 import '/services/background_location_service.dart';
 import '/services/notification_service.dart';
@@ -12,8 +11,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'slachtoffer_video_model.dart';
 export 'slachtoffer_video_model.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
+import '/services/webrtc_service.dart';
+import 'package:permission_handler/permission_handler.dart';
+import '/auth/firebase_auth/auth_util.dart';
 
-/// Emergency Call Interface
+/// Emergency Audio Call Interface
 class SlachtofferVideoWidget extends StatefulWidget {
   const SlachtofferVideoWidget({super.key});
 
@@ -31,6 +34,13 @@ class _SlachtofferVideoWidgetState extends State<SlachtofferVideoWidget> {
   late NotificationService _notificationService;
   Statuscall? _previousStatus;
 
+  // Audio renderers for playback
+  final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
+  final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
+  final _webrtcService = WebRTCService();
+  bool _isCallActive = false;
+  bool _isMicrophoneMuted = false;
+
   @override
   void initState() {
     super.initState();
@@ -46,6 +56,43 @@ class _SlachtofferVideoWidgetState extends State<SlachtofferVideoWidget> {
     if (FFAppState().Call.refrence != null) {
       _locationService.startCallMode(FFAppState().Call.refrence!.path);
     }
+    _initializeRenderers();
+  }
+
+  Future<void> _initializeRenderers() async {
+    // Initialize audio renderers for playback
+    await _localRenderer.initialize();
+    await _remoteRenderer.initialize();
+    // Request microphone permission
+    await Permission.microphone.request();
+  }
+
+  Future<void> _startWebRTCCall() async {
+    if (_isCallActive) return; // Already started
+
+    await _webrtcService.startCall(
+      voornaam: currentUserDisplayName,
+      achternaam: '',
+      callDocRef: FFAppState().Call.refrence,
+      onLocalStream: (stream) {
+        print('🎤 Local audio stream started');
+        if (mounted) {
+          setState(() {
+            _localRenderer.srcObject = stream;
+          });
+        }
+      },
+      onRemoteStream: (stream) {
+        print('🔊 Remote audio stream received');
+        if (mounted) {
+          setState(() {
+            _remoteRenderer.srcObject = stream;
+          });
+        }
+      },
+    );
+
+    if (mounted) setState(() => _isCallActive = true);
   }
 
   void _onReceiveTaskData(dynamic data) {
@@ -67,6 +114,11 @@ class _SlachtofferVideoWidgetState extends State<SlachtofferVideoWidget> {
     _locationService.stopTracking(); // Stop service when leaving call page
     FlutterForegroundTask.removeTaskDataCallback(_onReceiveTaskData);
     _model.dispose();
+    _webrtcService.hangUp();
+
+    // Dispose audio renderers
+    _localRenderer.dispose();
+    _remoteRenderer.dispose();
 
     super.dispose();
   }
@@ -119,7 +171,7 @@ class _SlachtofferVideoWidgetState extends State<SlachtofferVideoWidget> {
         final slachtofferVideoConnectionRecord = snapshot.data!;
 
         print('════════════════════════════════════════');
-        print('📊 SLACHTOFFER VIDEO STREAM UPDATE');
+        print('📊 SLACHTOFFER AUDIO CALL STREAM UPDATE');
         print('════════════════════════════════════════');
         print('Status: ${slachtofferVideoConnectionRecord.status}');
         print('Previous Status: $_previousStatus');
@@ -145,7 +197,7 @@ class _SlachtofferVideoWidgetState extends State<SlachtofferVideoWidget> {
             _previousStatus = slachtofferVideoConnectionRecord.status;
             print('✅ Status changed detected: $oldStatus → $_previousStatus');
 
-            // Show notification when status changes from waiting to active
+            // Show notification and start WebRTC when status changes from waiting to active
             if (oldStatus == Statuscall.waiting &&
                 slachtofferVideoConnectionRecord.status == Statuscall.active) {
               print('📢 Showing call accepted notification');
@@ -161,6 +213,10 @@ class _SlachtofferVideoWidgetState extends State<SlachtofferVideoWidget> {
               } catch (e) {
                 print('❌ Error showing notification: $e');
               }
+
+              // Start WebRTC call when dispatcher accepts
+              print('🎤 Starting WebRTC audio call');
+              await _startWebRTCCall();
             }
 
             // Start tracking on both waiting and active states
@@ -233,11 +289,12 @@ class _SlachtofferVideoWidgetState extends State<SlachtofferVideoWidget> {
                             children: [
                               Row(
                                 mainAxisSize: MainAxisSize.max,
-                                mainAxisAlignment: MainAxisAlignment.start,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   Row(
-                                    mainAxisSize: MainAxisSize.max,
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Text(
                                         'Dispatch',
@@ -261,7 +318,148 @@ class _SlachtofferVideoWidgetState extends State<SlachtofferVideoWidget> {
                                                       .fontStyle,
                                             ),
                                       ),
-                                    ].divide(SizedBox(width: 8.0)),
+                                      SizedBox(width: 8.0),
+                                      Container(
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 12.0, vertical: 6.0),
+                                        decoration: BoxDecoration(
+                                          color:
+                                              slachtofferVideoConnectionRecord
+                                                          .status ==
+                                                      Statuscall.active
+                                                  ? Color(0xFF10B981)
+                                                  : Color(0xFFF59E0B),
+                                          borderRadius:
+                                              BorderRadius.circular(12.0),
+                                        ),
+                                        child: Text(
+                                          slachtofferVideoConnectionRecord
+                                                      .status ==
+                                                  Statuscall.active
+                                              ? 'Actief'
+                                              : 'Wachten',
+                                          style: FlutterFlowTheme.of(context)
+                                              .bodySmall
+                                              .override(
+                                                font: GoogleFonts.inter(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                                color: Colors.white,
+                                                fontSize: 12.0,
+                                                letterSpacing: 0.0,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      InkWell(
+                                        onTap: () {
+                                          setState(() {
+                                            _isMicrophoneMuted =
+                                                !_isMicrophoneMuted;
+                                          });
+                                          // TODO: Implement actual microphone mute/unmute
+                                        },
+                                        child: Container(
+                                          width: 40.0,
+                                          height: 40.0,
+                                          decoration: BoxDecoration(
+                                            color: _isMicrophoneMuted
+                                                ? FlutterFlowTheme.of(context)
+                                                    .error
+                                                : FlutterFlowTheme.of(context)
+                                                    .alternate,
+                                            borderRadius:
+                                                BorderRadius.circular(20.0),
+                                          ),
+                                          child: Icon(
+                                            _isMicrophoneMuted
+                                                ? FFIcons.kmicrophoneSlash
+                                                : FFIcons.kmicrophone,
+                                            size: 18.0,
+                                            color: _isMicrophoneMuted
+                                                ? Colors.white
+                                                : FlutterFlowTheme.of(context)
+                                                    .primaryText,
+                                          ),
+                                        ),
+                                      ),
+                                      SizedBox(width: 8.0),
+                                      InkWell(
+                                        onTap: () async {
+                                          context.pushNamed(
+                                            SlachtofferChatWidget.routeName,
+                                            extra: <String, dynamic>{
+                                              kTransitionInfoKey:
+                                                  TransitionInfo(
+                                                hasTransition: true,
+                                                transitionType:
+                                                    PageTransitionType.fade,
+                                                duration:
+                                                    Duration(milliseconds: 200),
+                                              ),
+                                            },
+                                          );
+                                        },
+                                        child: Container(
+                                          width: 40.0,
+                                          height: 40.0,
+                                          decoration: BoxDecoration(
+                                            color: FlutterFlowTheme.of(context)
+                                                .alternate,
+                                            borderRadius:
+                                                BorderRadius.circular(20.0),
+                                          ),
+                                          child: Icon(
+                                            FFIcons.kchatText,
+                                            size: 18.0,
+                                            color: FlutterFlowTheme.of(context)
+                                                .primaryText,
+                                          ),
+                                        ),
+                                      ),
+                                      SizedBox(width: 8.0),
+                                      InkWell(
+                                        onTap: () async {
+                                          context.pushNamed(
+                                            SlachtofferHomeWidget.routeName,
+                                            extra: <String, dynamic>{
+                                              kTransitionInfoKey:
+                                                  TransitionInfo(
+                                                hasTransition: true,
+                                                transitionType:
+                                                    PageTransitionType.fade,
+                                                duration:
+                                                    Duration(milliseconds: 200),
+                                              ),
+                                            },
+                                          );
+                                          FFAppState().deleteCall();
+                                          FFAppState().Call =
+                                              ActiveCallStruct();
+                                          safeSetState(() {});
+                                        },
+                                        child: Container(
+                                          width: 40.0,
+                                          height: 40.0,
+                                          decoration: BoxDecoration(
+                                            color: FlutterFlowTheme.of(context)
+                                                .primary,
+                                            borderRadius:
+                                                BorderRadius.circular(20.0),
+                                          ),
+                                          child: Icon(
+                                            FFIcons.kphoneX,
+                                            size: 18.0,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
@@ -270,307 +468,146 @@ class _SlachtofferVideoWidgetState extends State<SlachtofferVideoWidget> {
                                 color: FlutterFlowTheme.of(context).alternate,
                               ),
                               Expanded(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.max,
-                                  children: [
-                                    if (slachtofferVideoConnectionRecord
-                                            .status ==
-                                        Statuscall.active)
-                                      Expanded(
-                                        child: Padding(
-                                          padding: EdgeInsets.all(16.0),
-                                          child: Container(
-                                            width: MediaQuery.sizeOf(context)
-                                                    .width *
-                                                1.0,
-                                            height: MediaQuery.sizeOf(context)
-                                                    .width *
-                                                1.0,
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [
+                                          Color(0xFF1E293B),
+                                          Color(0xFF0F172A),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: Center(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          // Audio wave animation or microphone icon
+                                          Container(
+                                            width: 120.0,
+                                            height: 120.0,
                                             decoration: BoxDecoration(
-                                              color: Color(0xFFDADEE0),
+                                              color:
+                                                  slachtofferVideoConnectionRecord
+                                                              .status ==
+                                                          Statuscall.active
+                                                      ? Color(0xFF10B981)
+                                                          .withOpacity(0.2)
+                                                      : Color(0xFFF59E0B)
+                                                          .withOpacity(0.2),
                                               shape: BoxShape.circle,
                                             ),
-                                            child: Align(
-                                              alignment: AlignmentDirectional(
-                                                  0.0, 0.0),
-                                              child: Text(
-                                                'D',
-                                                style:
-                                                    FlutterFlowTheme.of(context)
-                                                        .displayLarge
-                                                        .override(
-                                                          font: GoogleFonts
-                                                              .interTight(
-                                                            fontWeight:
-                                                                FlutterFlowTheme.of(
-                                                                        context)
-                                                                    .displayLarge
-                                                                    .fontWeight,
-                                                            fontStyle:
-                                                                FlutterFlowTheme.of(
-                                                                        context)
-                                                                    .displayLarge
-                                                                    .fontStyle,
-                                                          ),
-                                                          letterSpacing: 0.0,
-                                                          fontWeight:
-                                                              FlutterFlowTheme.of(
-                                                                      context)
-                                                                  .displayLarge
-                                                                  .fontWeight,
-                                                          fontStyle:
-                                                              FlutterFlowTheme.of(
-                                                                      context)
-                                                                  .displayLarge
-                                                                  .fontStyle,
-                                                        ),
+                                            child: Center(
+                                              child: Icon(
+                                                _isMicrophoneMuted
+                                                    ? FFIcons.kmicrophoneSlash
+                                                    : FFIcons.kmicrophone,
+                                                size: 60.0,
+                                                color:
+                                                    slachtofferVideoConnectionRecord
+                                                                .status ==
+                                                            Statuscall.active
+                                                        ? Color(0xFF10B981)
+                                                        : Color(0xFFF59E0B),
                                               ),
                                             ),
                                           ),
-                                        ),
-                                      ),
-                                    if (slachtofferVideoConnectionRecord
-                                            .status !=
-                                        Statuscall.active)
-                                      Expanded(
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.max,
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Text(
-                                              'Waiting...',
-                                              style: FlutterFlowTheme.of(
-                                                      context)
-                                                  .titleSmall
-                                                  .override(
-                                                    font:
-                                                        GoogleFonts.interTight(
-                                                      fontWeight:
-                                                          FlutterFlowTheme.of(
-                                                                  context)
-                                                              .titleSmall
-                                                              .fontWeight,
-                                                      fontStyle:
-                                                          FlutterFlowTheme.of(
-                                                                  context)
-                                                              .titleSmall
-                                                              .fontStyle,
-                                                    ),
-                                                    letterSpacing: 0.0,
-                                                    fontWeight:
-                                                        FlutterFlowTheme.of(
-                                                                context)
-                                                            .titleSmall
-                                                            .fontWeight,
-                                                    fontStyle:
-                                                        FlutterFlowTheme.of(
-                                                                context)
-                                                            .titleSmall
-                                                            .fontStyle,
+                                          SizedBox(height: 32.0),
+                                          Text(
+                                            slachtofferVideoConnectionRecord
+                                                        .status ==
+                                                    Statuscall.active
+                                                ? 'Verbonden met Dispatch'
+                                                : 'Wachten op Dispatch',
+                                            style: FlutterFlowTheme.of(context)
+                                                .titleLarge
+                                                .override(
+                                                  font: GoogleFonts.interTight(
+                                                    fontWeight: FontWeight.bold,
                                                   ),
-                                            ),
-                                            Text(
-                                              'A dispatcher will come soon, answer in the mean time some question in the chat',
+                                                  color: Colors.white,
+                                                  fontSize: 24.0,
+                                                  letterSpacing: 0.0,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                          ),
+                                          SizedBox(height: 16.0),
+                                          Padding(
+                                            padding: EdgeInsets.symmetric(
+                                                horizontal: 32.0),
+                                            child: Text(
+                                              slachtofferVideoConnectionRecord
+                                                          .status ==
+                                                      Statuscall.active
+                                                  ? 'Je bent nu verbonden met een dispatcher. Beschrijf je noodsituatie.'
+                                                  : 'Een dispatcher komt zo bij je. Beantwoord ondertussen vragen in de chat.',
                                               textAlign: TextAlign.center,
                                               style:
                                                   FlutterFlowTheme.of(context)
                                                       .bodyMedium
                                                       .override(
-                                                        font: GoogleFonts.inter(
-                                                          fontWeight:
-                                                              FlutterFlowTheme.of(
-                                                                      context)
-                                                                  .bodyMedium
-                                                                  .fontWeight,
-                                                          fontStyle:
-                                                              FlutterFlowTheme.of(
-                                                                      context)
-                                                                  .bodyMedium
-                                                                  .fontStyle,
-                                                        ),
+                                                        font:
+                                                            GoogleFonts.inter(),
+                                                        color: Colors.white70,
+                                                        fontSize: 14.0,
                                                         letterSpacing: 0.0,
-                                                        fontWeight:
-                                                            FlutterFlowTheme.of(
-                                                                    context)
-                                                                .bodyMedium
-                                                                .fontWeight,
-                                                        fontStyle:
-                                                            FlutterFlowTheme.of(
-                                                                    context)
-                                                                .bodyMedium
-                                                                .fontStyle,
                                                       ),
                                             ),
-                                          ].divide(SizedBox(height: 4.0)),
-                                        ),
+                                          ),
+                                          if (_isMicrophoneMuted)
+                                            Padding(
+                                              padding:
+                                                  EdgeInsets.only(top: 16.0),
+                                              child: Container(
+                                                padding: EdgeInsets.symmetric(
+                                                    horizontal: 16.0,
+                                                    vertical: 8.0),
+                                                decoration: BoxDecoration(
+                                                  color: FlutterFlowTheme.of(
+                                                          context)
+                                                      .error
+                                                      .withOpacity(0.2),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          8.0),
+                                                  border: Border.all(
+                                                    color: FlutterFlowTheme.of(
+                                                            context)
+                                                        .error,
+                                                    width: 1.0,
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  'Microfoon is gedempt',
+                                                  style: FlutterFlowTheme.of(
+                                                          context)
+                                                      .bodySmall
+                                                      .override(
+                                                        font:
+                                                            GoogleFonts.inter(),
+                                                        color:
+                                                            FlutterFlowTheme.of(
+                                                                    context)
+                                                                .error,
+                                                        letterSpacing: 0.0,
+                                                      ),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
                                       ),
-                                  ],
+                                    ),
+                                  ),
                                 ),
                               ),
                             ].divide(SizedBox(height: 16.0)),
                           ),
                         ),
-                        Column(
-                          mainAxisSize: MainAxisSize.max,
-                          children: [
-                            Row(
-                              mainAxisSize: MainAxisSize.max,
-                              children: [
-                                Expanded(
-                                  child: FFButtonWidget(
-                                    onPressed: () {
-                                      print('Button pressed ...');
-                                    },
-                                    text: '',
-                                    icon: Icon(
-                                      FFIcons.kcamera,
-                                      size: 15.0,
-                                    ),
-                                    options: FFButtonOptions(
-                                      width: double.infinity,
-                                      height: 40.0,
-                                      padding: EdgeInsets.all(8.0),
-                                      iconPadding:
-                                          EdgeInsetsDirectional.fromSTEB(
-                                              0.0, 0.0, 0.0, 0.0),
-                                      color: FlutterFlowTheme.of(context)
-                                          .alternate,
-                                      textStyle: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .override(
-                                            font: GoogleFonts.inter(
-                                              fontWeight: FontWeight.normal,
-                                              fontStyle:
-                                                  FlutterFlowTheme.of(context)
-                                                      .bodyMedium
-                                                      .fontStyle,
-                                            ),
-                                            color: FlutterFlowTheme.of(context)
-                                                .primaryText,
-                                            fontSize: 12.0,
-                                            letterSpacing: 0.0,
-                                            fontWeight: FontWeight.normal,
-                                            fontStyle:
-                                                FlutterFlowTheme.of(context)
-                                                    .bodyMedium
-                                                    .fontStyle,
-                                          ),
-                                      elevation: 0.0,
-                                      borderRadius: BorderRadius.circular(24.0),
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: FFButtonWidget(
-                                    onPressed: () async {
-                                      context.pushNamed(
-                                        SlachtofferChatWidget.routeName,
-                                        extra: <String, dynamic>{
-                                          kTransitionInfoKey: TransitionInfo(
-                                            hasTransition: true,
-                                            transitionType:
-                                                PageTransitionType.fade,
-                                            duration:
-                                                Duration(milliseconds: 200),
-                                          ),
-                                        },
-                                      );
-                                    },
-                                    text: '',
-                                    icon: Icon(
-                                      FFIcons.kchatText,
-                                      size: 15.0,
-                                    ),
-                                    options: FFButtonOptions(
-                                      width: double.infinity,
-                                      height: 40.0,
-                                      padding: EdgeInsets.all(8.0),
-                                      iconPadding:
-                                          EdgeInsetsDirectional.fromSTEB(
-                                              0.0, 0.0, 0.0, 0.0),
-                                      color: FlutterFlowTheme.of(context)
-                                          .alternate,
-                                      textStyle: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .override(
-                                            font: GoogleFonts.inter(
-                                              fontWeight: FontWeight.normal,
-                                              fontStyle:
-                                                  FlutterFlowTheme.of(context)
-                                                      .bodyMedium
-                                                      .fontStyle,
-                                            ),
-                                            color: FlutterFlowTheme.of(context)
-                                                .primaryText,
-                                            fontSize: 12.0,
-                                            letterSpacing: 0.0,
-                                            fontWeight: FontWeight.normal,
-                                            fontStyle:
-                                                FlutterFlowTheme.of(context)
-                                                    .bodyMedium
-                                                    .fontStyle,
-                                          ),
-                                      elevation: 0.0,
-                                      borderRadius: BorderRadius.circular(24.0),
-                                    ),
-                                  ),
-                                ),
-                              ].divide(SizedBox(width: 16.0)),
-                            ),
-                            FFButtonWidget(
-                              onPressed: () async {
-                                context.pushNamed(
-                                  SlachtofferHomeWidget.routeName,
-                                  extra: <String, dynamic>{
-                                    kTransitionInfoKey: TransitionInfo(
-                                      hasTransition: true,
-                                      transitionType: PageTransitionType.fade,
-                                      duration: Duration(milliseconds: 200),
-                                    ),
-                                  },
-                                );
-
-                                FFAppState().deleteCall();
-                                FFAppState().Call = ActiveCallStruct();
-
-                                safeSetState(() {});
-                              },
-                              text: '',
-                              icon: Icon(
-                                FFIcons.kphoneX,
-                                size: 15.0,
-                              ),
-                              options: FFButtonOptions(
-                                width: double.infinity,
-                                height: 40.0,
-                                padding: EdgeInsets.all(8.0),
-                                iconPadding: EdgeInsetsDirectional.fromSTEB(
-                                    0.0, 0.0, 0.0, 0.0),
-                                color: FlutterFlowTheme.of(context).primary,
-                                textStyle: FlutterFlowTheme.of(context)
-                                    .bodyMedium
-                                    .override(
-                                      font: GoogleFonts.inter(
-                                        fontWeight: FontWeight.normal,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .fontStyle,
-                                      ),
-                                      color: Colors.white,
-                                      fontSize: 12.0,
-                                      letterSpacing: 0.0,
-                                      fontWeight: FontWeight.normal,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .fontStyle,
-                                    ),
-                                elevation: 0.0,
-                                borderRadius: BorderRadius.circular(24.0),
-                              ),
-                            ),
-                          ].divide(SizedBox(height: 12.0)),
-                        ),
+                        SizedBox.shrink(), // Buttons moved to header
                       ],
                     ),
                   ),

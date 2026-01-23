@@ -15,13 +15,13 @@ import 'package:flutter_map_location_marker/flutter_map_location_marker.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:http/http.dart' as http;
-import 'dart:math';
 import 'map_model.dart';
 import '/backend/schema/map_pins_record.dart';
 import '/utils/map_utils.dart';
 import '/utils/route_result.dart';
 import 'dart:async'; // For StreamSubscription
 import 'dart:convert';
+import 'dart:math' show pi;
 
 export 'map_model.dart';
 
@@ -55,8 +55,6 @@ class _MapWidgetState extends State<MapWidget> {
   List<latlong.LatLng>? _routePoints;
   String? _routeTargetName;
   String? _routeEtaText;
-  latlong.LatLng?
-      _currentDestination; // Track the current navigation destination
   bool _isFetchingRoute = false;
 
   @override
@@ -199,13 +197,12 @@ class _MapWidgetState extends State<MapWidget> {
       _routeTargetName = record.name;
       _routePoints = null;
       _routeEtaText = null;
-      _currentDestination = latlong.LatLng(
-        record.location!.latitude,
-        record.location!.longitude,
-      );
     });
 
-    final destination = _currentDestination!;
+    final destination = latlong.LatLng(
+      record.location!.latitude,
+      record.location!.longitude,
+    );
 
     // Fetch route in background
     _fetchRoute(userLoc, destination).then((result) {
@@ -217,7 +214,6 @@ class _MapWidgetState extends State<MapWidget> {
           _routeTargetName = null;
           _routePoints = null;
           _routeEtaText = null;
-          _currentDestination = null;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Unable to build route right now.')),
@@ -313,7 +309,6 @@ class _MapWidgetState extends State<MapWidget> {
       _routeTargetName = null;
       _routeEtaText = null;
       _isFetchingRoute = false;
-      _currentDestination = null;
     });
   }
 
@@ -323,19 +318,6 @@ class _MapWidgetState extends State<MapWidget> {
     _mapController.fitCamera(
       CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(40)),
     );
-  }
-
-  /// Calculate bearing from one point to another (in radians)
-  double _calculateBearing(latlong.LatLng from, latlong.LatLng to) {
-    final lat1 = from.latitude * pi / 180;
-    final lat2 = to.latitude * pi / 180;
-    final dLon = (to.longitude - from.longitude) * pi / 180;
-
-    final y = sin(dLon) * cos(lat2);
-    final x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon);
-    final bearing = atan2(y, x);
-
-    return bearing; // Returns radians
   }
 
   Future<void> _checkAndStartInterventionNavigation() async {
@@ -391,7 +373,6 @@ class _MapWidgetState extends State<MapWidget> {
       _routeTargetName = name;
       _routePoints = null;
       _routeEtaText = null;
-      _currentDestination = destination;
     });
 
     // Fetch route in background
@@ -404,7 +385,6 @@ class _MapWidgetState extends State<MapWidget> {
           _routeTargetName = null;
           _routePoints = null;
           _routeEtaText = null;
-          _currentDestination = null;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Unable to build route right now.')),
@@ -875,15 +855,13 @@ class _MapWidgetState extends State<MapWidget> {
                                                             )
                                                           ],
                                                         ),
-                                                        child:
-                                                            SingleChildScrollView(
+                                                        child: SingleChildScrollView(
                                                           controller:
                                                               scrollController,
                                                           child: Column(
                                                             children: [
                                                               Center(
-                                                                child:
-                                                                    Container(
+                                                                child: Container(
                                                                   margin: const EdgeInsets
                                                                       .symmetric(
                                                                       vertical:
@@ -897,7 +875,8 @@ class _MapWidgetState extends State<MapWidget> {
                                                                         .alternate,
                                                                     borderRadius:
                                                                         BorderRadius
-                                                                            .circular(2),
+                                                                            .circular(
+                                                                                2),
                                                                   ),
                                                                 ),
                                                               ),
@@ -914,31 +893,31 @@ class _MapWidgetState extends State<MapWidget> {
                                                                       .labelMedium
                                                                       .override(
                                                                         fontFamily:
-                                                                            'Inter',
-                                                                        letterSpacing:
-                                                                            1.5,
-                                                                        fontWeight:
-                                                                            FontWeight.bold,
-                                                                      ),
-                                                                ),
+                                                                          'Inter',
+                                                                      letterSpacing:
+                                                                          1.5,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold,
+                                                                    ),
                                                               ),
-                                                              ListView
-                                                                  .separated(
-                                                                shrinkWrap:
-                                                                    true,
-                                                                physics:
-                                                                    const NeverScrollableScrollPhysics(),
-                                                                padding:
-                                                                    EdgeInsets
-                                                                        .zero,
-                                                                itemCount:
-                                                                    mapPinsRecordList
-                                                                        .length,
-                                                                separatorBuilder: (context,
-                                                                        index) =>
-                                                                    Divider(
-                                                                        height:
-                                                                            1,
+                                                            ),
+                                                            ListView
+                                                                .separated(
+                                                              shrinkWrap: true,
+                                                              physics:
+                                                                  const NeverScrollableScrollPhysics(),
+                                                              padding:
+                                                                  EdgeInsets
+                                                                      .zero,
+                                                              itemCount:
+                                                                  mapPinsRecordList
+                                                                      .length,
+                                                              separatorBuilder: (context,
+                                                                      index) =>
+                                                                  Divider(
+                                                                      height:
+                                                                          1,
                                                                         color: FlutterFlowTheme.of(context)
                                                                             .alternate),
                                                                 itemBuilder:
@@ -1071,12 +1050,6 @@ class _MapWidgetState extends State<MapWidget> {
                     isCalculating: _isFetchingRoute,
                     etaText: _routeEtaText,
                     onClose: _clearRoute,
-                    bearing: currentUserLocation != null &&
-                            _currentDestination != null
-                        ? _calculateBearing(
-                            currentUserLocation!, _currentDestination!)
-                        : null,
-                    currentHeading: currentHeading,
                   ),
                 ),
             ],
@@ -1112,42 +1085,19 @@ class _MapWidgetState extends State<MapWidget> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          record.name,
-                          style: FlutterFlowTheme.of(context).headlineMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        if (dist != null)
-                          Text(
-                            '$dist km away',
-                            style: FlutterFlowTheme.of(context)
-                                .bodyMedium
-                                .override(
-                                  fontFamily: 'Inter',
-                                  color: FlutterFlowTheme.of(context)
-                                      .secondaryText,
-                                ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.navigation, size: 32),
-                    color: FlutterFlowTheme.of(context).primary,
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _startNavigation(record);
-                    },
-                  ),
-                ],
+              Text(
+                record.name,
+                style: FlutterFlowTheme.of(context).headlineMedium,
               ),
+              const SizedBox(height: 8),
+              if (dist != null)
+                Text(
+                  '$dist km away',
+                  style: FlutterFlowTheme.of(context).bodyMedium.override(
+                        fontFamily: 'Inter',
+                        color: FlutterFlowTheme.of(context).secondaryText,
+                      ),
+                ),
               const SizedBox(height: 16),
             ],
           ),

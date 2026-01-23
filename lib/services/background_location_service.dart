@@ -394,16 +394,20 @@ class LocationTaskHandler extends TaskHandler {
 
     _lastUpdate = now;
 
-    await FirebaseFirestore.instance.doc(teamPath).update({
-      'Location': GeoPoint(position.latitude, position.longitude),
-      'LastLocationUpdate': FieldValue.serverTimestamp(),
-    });
+    try {
+      await FirebaseFirestore.instance.doc(teamPath).update({
+        'Location': GeoPoint(position.latitude, position.longitude),
+        'LastLocationUpdate': FieldValue.serverTimestamp(),
+      });
 
-    FlutterForegroundTask.updateService(
-      notificationTitle: 'Redivo - Locatie Tracking',
-      notificationText:
-          'Laatste update: ${now.hour}:${now.minute.toString().padLeft(2, '0')}',
-    );
+      FlutterForegroundTask.updateService(
+        notificationTitle: 'Redivo - Locatie Tracking',
+        notificationText:
+            'Laatste update: ${now.hour}:${now.minute.toString().padLeft(2, '0')}',
+      );
+    } catch (e) {
+      print('❌ Error updating team location: $e');
+    }
   }
 
   Future<void> _updateCallLocation(Position position, String callPath) async {
@@ -415,19 +419,23 @@ class LocationTaskHandler extends TaskHandler {
 
     _lastUpdate = now;
 
-    await FirebaseFirestore.instance.doc(callPath).update({
-      'Location': GeoPoint(position.latitude, position.longitude),
-      'LastLocationUpdate': FieldValue.serverTimestamp(),
-    });
+    try {
+      await FirebaseFirestore.instance.doc(callPath).update({
+        'Location': GeoPoint(position.latitude, position.longitude),
+        'LastLocationUpdate': FieldValue.serverTimestamp(),
+      });
 
-    FlutterForegroundTask.updateService(
-      notificationTitle: 'Noodoproep Actief',
-      notificationText:
-          'Locatie update: ${now.hour}:${now.minute.toString().padLeft(2, '0')}',
-    );
+      FlutterForegroundTask.updateService(
+        notificationTitle: 'Noodoproep Actief',
+        notificationText:
+            'Locatie update: ${now.hour}:${now.minute.toString().padLeft(2, '0')}',
+      );
 
-    print(
-        '📍 Call location updated: ${position.latitude}, ${position.longitude}');
+      print(
+          '📍 Call location updated: ${position.latitude}, ${position.longitude}');
+    } catch (e) {
+      print('❌ Error updating call location: $e');
+    }
   }
 
   @override
