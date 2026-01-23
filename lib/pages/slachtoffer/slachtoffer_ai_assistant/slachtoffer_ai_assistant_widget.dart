@@ -340,7 +340,8 @@ class _SlachtofferAIAssistantWidgetState
                         ),
                       ),
                       TextButton(
-                        onPressed: () => Navigator.pop(alertDialogContext, true),
+                        onPressed: () =>
+                            Navigator.pop(alertDialogContext, true),
                         style: TextButton.styleFrom(
                           backgroundColor: FlutterFlowTheme.of(context).primary,
                           shape: RoundedRectangleBorder(
@@ -363,10 +364,12 @@ class _SlachtofferAIAssistantWidgetState
               if (shouldNavigate == true && mounted) {
                 // Set static flags for navigation
                 SlachtofferMapWidget.shouldStartNavigationToRedCross = true;
-                SlachtofferMapWidget.targetRedCrossLat = nearestRedCross.latitude;
-                SlachtofferMapWidget.targetRedCrossLng = nearestRedCross.longitude;
+                SlachtofferMapWidget.targetRedCrossLat =
+                    nearestRedCross.latitude;
+                SlachtofferMapWidget.targetRedCrossLng =
+                    nearestRedCross.longitude;
                 SlachtofferMapWidget.targetRedCrossName = nearestRedCross.name;
-                
+
                 // Navigate to map
                 context.pushNamed(
                   SlachtofferMapWidget.routeName,

@@ -28,7 +28,7 @@ class SlachtofferMapWidget extends StatefulWidget {
 
   static String routeName = 'SlachtofferMap';
   static String routePath = '/slachtofferMap';
-  
+
   // Static flags for navigation
   static bool shouldStartNavigationToRedCross = false;
   static double? targetRedCrossLat;
@@ -65,13 +65,14 @@ class _SlachtofferMapWidgetState extends State<SlachtofferMapWidget> {
     _loadMapboxRx();
     _startLocationUpdates();
     _startCompassUpdates();
-    
+
     // Check if we should auto-start navigation to Red Cross
     if (SlachtofferMapWidget.shouldStartNavigationToRedCross) {
-      SlachtofferMapWidget.shouldStartNavigationToRedCross = false; // Reset flag
+      SlachtofferMapWidget.shouldStartNavigationToRedCross =
+          false; // Reset flag
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && 
-            SlachtofferMapWidget.targetRedCrossLat != null && 
+        if (mounted &&
+            SlachtofferMapWidget.targetRedCrossLat != null &&
             SlachtofferMapWidget.targetRedCrossLng != null) {
           _startNavigationWithCoords(
             SlachtofferMapWidget.targetRedCrossLat!,
@@ -86,8 +87,6 @@ class _SlachtofferMapWidgetState extends State<SlachtofferMapWidget> {
       });
     }
   }
-
-
 
   double currentHeading = 0.0;
 
@@ -207,17 +206,18 @@ class _SlachtofferMapWidgetState extends State<SlachtofferMapWidget> {
     );
   }
 
-  Future<void> _startNavigationWithCoords(double lat, double lng, String name) async {
+  Future<void> _startNavigationWithCoords(
+      double lat, double lng, String name) async {
     // Wait for location to be available (retry up to 5 times with 500ms delay)
     latlong.LatLng? userLoc = currentUserLocation;
     int retries = 0;
-    
+
     while (userLoc == null && retries < 5) {
       await Future.delayed(const Duration(milliseconds: 500));
       userLoc = currentUserLocation;
       retries++;
     }
-    
+
     if (userLoc == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -35,6 +35,11 @@ class _SlachtofferVideoWidgetState extends State<SlachtofferVideoWidget> {
   void initState() {
     super.initState();
     _model = createModel(context, () => SlachtofferVideoModel());
+    
+    // Initialize text controller for chat input
+    _model.textController ??= TextEditingController();
+    _model.textFieldFocusNode ??= FocusNode();
+    
     _locationService = BackgroundLocationService();
     _notificationService = NotificationService();
     _previousStatus = null;
@@ -374,7 +379,10 @@ class _SlachtofferVideoWidgetState extends State<SlachtofferVideoWidget> {
                                           FlutterFlowTheme.of(context).primary),
                                   onPressed: () async {
                                     if (_model.textController?.text.isEmpty ??
-                                        true) return;
+                                        true) {
+                                      print(_model.textController?.text);
+                                      return;
+                                    }
                                     await ChatsRecord.createDoc(
                                             FFAppState().Call.refrence!)
                                         .set(createChatsRecordData(
