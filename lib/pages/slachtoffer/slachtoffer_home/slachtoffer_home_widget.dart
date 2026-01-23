@@ -329,9 +329,10 @@ class _SlachtofferHomeWidgetState extends State<SlachtofferHomeWidget> {
                             ),
                             FFButtonWidget(
                               onPressed: () {
-                                print('Button pressed ...');
+                                context.pushNamed(
+                                    SlachtofferAIAssistantWidget.routeName);
                               },
-                              text: 'Most ask questions',
+                              text: 'Ask AI Assistant',
                               icon: Icon(
                                 FFIcons.kquestion,
                                 size: 15.0,

@@ -10,6 +10,8 @@ export '/pages/slachtoffer/slachtoffer_chat/slachtoffer_chat_widget.dart'
     show SlachtofferChatWidget;
 export '/pages/slachtoffer/slachtoffer_video/slachtoffer_video_widget.dart'
     show SlachtofferVideoWidget;
+export '/pages/slachtoffer/slachtoffer_ai_assistant/slachtoffer_ai_assistant_widget.dart'
+    show SlachtofferAIAssistantWidget;
 export '/pages/hulpverlener/berichten/berichten_widget.dart'
     show BerichtenWidget;
 export '/pages/hulpverlener/hulpverlener_home/hulpverlener_home_widget.dart'

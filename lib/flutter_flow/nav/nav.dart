@@ -130,6 +130,11 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           builder: (context, params) => SlachtofferVideoWidget(),
         ),
         FFRoute(
+          name: SlachtofferAIAssistantWidget.routeName,
+          path: SlachtofferAIAssistantWidget.routePath,
+          builder: (context, params) => SlachtofferAIAssistantWidget(),
+        ),
+        FFRoute(
             name: BerichtenWidget.routeName,
             path: BerichtenWidget.routePath,
             builder: (context, params) => params.isEmpty

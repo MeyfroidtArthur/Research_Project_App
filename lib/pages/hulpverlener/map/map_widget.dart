@@ -855,44 +855,41 @@ class _MapWidgetState extends State<MapWidget> {
                                                             )
                                                           ],
                                                         ),
-                                                        child: SingleChildScrollView(
-                                                          controller:
-                                                              scrollController,
-                                                          child: Column(
-                                                            children: [
-                                                              Center(
-                                                                child: Container(
-                                                                  margin: const EdgeInsets
-                                                                      .symmetric(
-                                                                      vertical:
-                                                                          12),
-                                                                  width: 40,
-                                                                  height: 4,
-                                                                  decoration:
-                                                                      BoxDecoration(
-                                                                    color: FlutterFlowTheme.of(
-                                                                            context)
-                                                                        .alternate,
-                                                                    borderRadius:
-                                                                        BorderRadius
-                                                                            .circular(
-                                                                                2),
-                                                                  ),
+                                                        child: Column(
+                                                          children: [
+                                                            Center(
+                                                              child: Container(
+                                                                margin: const EdgeInsets
+                                                                    .symmetric(
+                                                                    vertical:
+                                                                        12),
+                                                                width: 40,
+                                                                height: 4,
+                                                                decoration:
+                                                                    BoxDecoration(
+                                                                  color: FlutterFlowTheme.of(
+                                                                          context)
+                                                                      .alternate,
+                                                                  borderRadius:
+                                                                      BorderRadius
+                                                                          .circular(
+                                                                              2),
                                                                 ),
                                                               ),
-                                                              Padding(
-                                                                padding:
-                                                                    const EdgeInsets
-                                                                        .only(
-                                                                        bottom:
-                                                                            12.0),
-                                                                child: Text(
-                                                                  'LOCATIONS',
-                                                                  style: FlutterFlowTheme.of(
-                                                                          context)
-                                                                      .labelMedium
-                                                                      .override(
-                                                                        fontFamily:
+                                                            ),
+                                                            Padding(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .only(
+                                                                      bottom:
+                                                                          12.0),
+                                                              child: Text(
+                                                                'LOCATIONS',
+                                                                style: FlutterFlowTheme.of(
+                                                                        context)
+                                                                    .labelMedium
+                                                                    .override(
+                                                                      fontFamily:
                                                                           'Inter',
                                                                       letterSpacing:
                                                                           1.5,
@@ -902,22 +899,22 @@ class _MapWidgetState extends State<MapWidget> {
                                                                     ),
                                                               ),
                                                             ),
-                                                            ListView
-                                                                .separated(
-                                                              shrinkWrap: true,
-                                                              physics:
-                                                                  const NeverScrollableScrollPhysics(),
-                                                              padding:
-                                                                  EdgeInsets
-                                                                      .zero,
-                                                              itemCount:
-                                                                  mapPinsRecordList
-                                                                      .length,
-                                                              separatorBuilder: (context,
-                                                                      index) =>
-                                                                  Divider(
-                                                                      height:
-                                                                          1,
+                                                            Expanded(
+                                                              child: ListView
+                                                                  .separated(
+                                                                controller:
+                                                                    scrollController,
+                                                                padding:
+                                                                    EdgeInsets
+                                                                        .zero,
+                                                                itemCount:
+                                                                    mapPinsRecordList
+                                                                        .length,
+                                                                separatorBuilder: (context,
+                                                                        index) =>
+                                                                    Divider(
+                                                                        height:
+                                                                            1,
                                                                         color: FlutterFlowTheme.of(context)
                                                                             .alternate),
                                                                 itemBuilder:
@@ -1003,8 +1000,8 @@ class _MapWidgetState extends State<MapWidget> {
                                                                   );
                                                                 },
                                                               ),
-                                                            ],
-                                                          ),
+                                                            ),
+                                                          ],
                                                         ),
                                                       );
                                                     },

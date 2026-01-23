@@ -593,53 +593,51 @@ class _SlachtofferMapWidgetState extends State<SlachtofferMapWidget> {
                                                     )
                                                   ],
                                                 ),
-                                                child: SingleChildScrollView(
-                                                  controller: scrollController,
-                                                  child: Column(
-                                                    children: [
-                                                      Center(
-                                                        child: Container(
-                                                          margin: const EdgeInsets
-                                                              .symmetric(
-                                                              vertical: 12),
-                                                          width: 40,
-                                                          height: 4,
-                                                          decoration:
-                                                              BoxDecoration(
-                                                            color: FlutterFlowTheme
-                                                                    .of(context)
-                                                                .alternate,
-                                                            borderRadius:
-                                                                BorderRadius
-                                                                    .circular(2),
-                                                          ),
+                                                child: Column(
+                                                  children: [
+                                                    Center(
+                                                      child: Container(
+                                                        margin: const EdgeInsets
+                                                            .symmetric(
+                                                            vertical: 12),
+                                                        width: 40,
+                                                        height: 4,
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          color: FlutterFlowTheme
+                                                                  .of(context)
+                                                              .alternate,
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(2),
                                                         ),
                                                       ),
-                                                      Padding(
-                                                        padding:
-                                                            const EdgeInsets.only(
-                                                                bottom: 12.0),
-                                                        child: Text(
-                                                          'LOCATIONS',
-                                                          style:
-                                                              FlutterFlowTheme.of(
-                                                                      context)
-                                                                  .labelMedium
-                                                                  .override(
-                                                                    fontFamily:
-                                                                        'Inter',
-                                                                    letterSpacing:
-                                                                        1.5,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .bold,
-                                                                  ),
-                                                        ),
+                                                    ),
+                                                    Padding(
+                                                      padding:
+                                                          const EdgeInsets.only(
+                                                              bottom: 12.0),
+                                                      child: Text(
+                                                        'LOCATIONS',
+                                                        style:
+                                                            FlutterFlowTheme.of(
+                                                                    context)
+                                                                .labelMedium
+                                                                .override(
+                                                                  fontFamily:
+                                                                      'Inter',
+                                                                  letterSpacing:
+                                                                      1.5,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                ),
                                                       ),
-                                                      ListView.separated(
-                                                        shrinkWrap: true,
-                                                        physics:
-                                                            const NeverScrollableScrollPhysics(),
+                                                    ),
+                                                    Expanded(
+                                                      child: ListView.separated(
+                                                        controller:
+                                                            scrollController,
                                                         padding:
                                                             EdgeInsets.zero,
                                                         itemCount:
@@ -742,8 +740,8 @@ class _SlachtofferMapWidgetState extends State<SlachtofferMapWidget> {
                                                           );
                                                         },
                                                       ),
-                                                    ],
-                                                  ),
+                                                    ),
+                                                  ],
                                                 ),
                                               );
                                             },
