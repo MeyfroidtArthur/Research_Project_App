@@ -130,20 +130,32 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           builder: (context, params) => SlachtofferVideoWidget(),
         ),
         FFRoute(
-          name: BerichtenWidget.routeName,
-          path: BerichtenWidget.routePath,
-          builder: (context, params) => BerichtenWidget(),
-        ),
+            name: BerichtenWidget.routeName,
+            path: BerichtenWidget.routePath,
+            builder: (context, params) => params.isEmpty
+                ? HulpverlenerNavBarPage(initialPage: 'Berichten')
+                : HulpverlenerNavBarPage(
+                    initialPage: 'Berichten',
+                    page: BerichtenWidget(),
+                  )),
         FFRoute(
-          name: HulpverlenerHomeWidget.routeName,
-          path: HulpverlenerHomeWidget.routePath,
-          builder: (context, params) => HulpverlenerHomeWidget(),
-        ),
+            name: HulpverlenerHomeWidget.routeName,
+            path: HulpverlenerHomeWidget.routePath,
+            builder: (context, params) => params.isEmpty
+                ? HulpverlenerNavBarPage(initialPage: 'HulpverlenerHome')
+                : HulpverlenerNavBarPage(
+                    initialPage: 'HulpverlenerHome',
+                    page: HulpverlenerHomeWidget(),
+                  )),
         FFRoute(
-          name: MapWidget.routeName,
-          path: MapWidget.routePath,
-          builder: (context, params) => MapWidget(),
-        )
+            name: MapWidget.routeName,
+            path: MapWidget.routePath,
+            builder: (context, params) => params.isEmpty
+                ? HulpverlenerNavBarPage(initialPage: 'Map')
+                : HulpverlenerNavBarPage(
+                    initialPage: 'Map',
+                    page: MapWidget(),
+                  ))
       ].map((r) => r.toRoute(appStateNotifier)).toList(),
     );
 
@@ -348,19 +360,27 @@ class FFRoute {
                   child: child,
                   transitionDuration: transitionInfo.duration,
                   transitionsBuilder:
-                      (context, animation, secondaryAnimation, child) =>
-                          PageTransition(
-                    type: transitionInfo.transitionType,
-                    duration: transitionInfo.duration,
-                    reverseDuration: transitionInfo.duration,
-                    alignment: transitionInfo.alignment,
-                    child: child,
-                  ).buildTransitions(
-                    context,
-                    animation,
-                    secondaryAnimation,
-                    child,
-                  ),
+                      (context, animation, secondaryAnimation, child) {
+                    if (transitionInfo.transitionType ==
+                        PageTransitionType.fade) {
+                      return FadeTransition(
+                        opacity: animation,
+                        child: child,
+                      );
+                    }
+                    return PageTransition(
+                      type: transitionInfo.transitionType,
+                      duration: transitionInfo.duration,
+                      reverseDuration: transitionInfo.duration,
+                      alignment: transitionInfo.alignment,
+                      child: child,
+                    ).buildTransitions(
+                      context,
+                      animation,
+                      secondaryAnimation,
+                      child,
+                    );
+                  },
                 )
               : MaterialPage(key: state.pageKey, child: child);
         },
@@ -381,7 +401,7 @@ class TransitionInfo {
   final Duration duration;
   final Alignment? alignment;
 
-  static TransitionInfo appDefault() => TransitionInfo(hasTransition: false);
+  static TransitionInfo appDefault() => TransitionInfo(hasTransition: true);
 }
 
 class RootPageContext {

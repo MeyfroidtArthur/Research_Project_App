@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
+import 'dart:math';
 
 class NavigationBanner extends StatelessWidget {
   const NavigationBanner({
@@ -9,6 +10,8 @@ class NavigationBanner extends StatelessWidget {
     required this.etaText,
     required this.onClose,
     this.maxWidth,
+    this.bearing,
+    this.currentHeading,
   });
 
   final String targetName;
@@ -16,6 +19,8 @@ class NavigationBanner extends StatelessWidget {
   final String? etaText;
   final VoidCallback onClose;
   final double? maxWidth;
+  final double? bearing; // Bearing to destination in radians
+  final double? currentHeading; // Device heading in degrees
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +45,11 @@ class NavigationBanner extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(Icons.navigation, color: FlutterFlowTheme.of(context).primary),
+          Transform.rotate(
+            angle: (bearing ?? 0) - ((currentHeading ?? 0) * (pi / 180)),
+            child: Icon(Icons.navigation,
+                color: FlutterFlowTheme.of(context).primary),
+          ),
           const SizedBox(width: 10),
           Flexible(
             child: Column(

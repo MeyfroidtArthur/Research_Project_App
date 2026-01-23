@@ -1,6 +1,6 @@
+import '/backend/schema/enums/enums.dart';
 import '/backend/backend.dart';
 
-import '/components/navigation_widget.dart';
 import '/components/navigation_banner.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -15,13 +15,13 @@ import 'package:flutter_map_location_marker/flutter_map_location_marker.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:http/http.dart' as http;
+import 'dart:math';
 import 'map_model.dart';
 import '/backend/schema/map_pins_record.dart';
 import '/utils/map_utils.dart';
 import '/utils/route_result.dart';
 import 'dart:async'; // For StreamSubscription
 import 'dart:convert';
-import 'dart:math' show pi;
 
 export 'map_model.dart';
 
@@ -30,6 +30,9 @@ class MapWidget extends StatefulWidget {
 
   static String routeName = 'Map';
   static String routePath = '/map';
+
+  // Static flag to trigger navigation when opening the map
+  static bool shouldStartNavigationToIntervention = false;
 
   @override
   State<MapWidget> createState() => _MapWidgetState();
@@ -52,6 +55,8 @@ class _MapWidgetState extends State<MapWidget> {
   List<latlong.LatLng>? _routePoints;
   String? _routeTargetName;
   String? _routeEtaText;
+  latlong.LatLng?
+      _currentDestination; // Track the current navigation destination
   bool _isFetchingRoute = false;
 
   @override
@@ -61,16 +66,31 @@ class _MapWidgetState extends State<MapWidget> {
     _loadMapboxRx();
     _startLocationUpdates();
     _startCompassUpdates();
+
+    // Check if we should auto-start navigation to intervention
+    if (MapWidget.shouldStartNavigationToIntervention) {
+      MapWidget.shouldStartNavigationToIntervention = false; // Reset flag
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _checkAndStartInterventionNavigation();
+      });
+    }
   }
 
   double currentHeading = 0.0;
+  DateTime? _lastCompassUpdate;
 
   void _startCompassUpdates() {
     _compassSubscription = FlutterCompass.events?.listen((event) {
       if (mounted && event.heading != null) {
-        setState(() {
-          currentHeading = event.heading!;
-        });
+        // Throttle updates to max once per 100ms to reduce UI load
+        final now = DateTime.now();
+        if (_lastCompassUpdate == null ||
+            now.difference(_lastCompassUpdate!).inMilliseconds > 100) {
+          _lastCompassUpdate = now;
+          setState(() {
+            currentHeading = event.heading!;
+          });
+        }
       }
     });
   }
@@ -118,124 +138,164 @@ class _MapWidgetState extends State<MapWidget> {
   }
 
   Future<void> _centerOnUser() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
+    // Use the location we already have from the stream - instant!
+    if (currentUserLocation != null) {
+      _mapController.move(currentUserLocation!, 15.0);
       return;
     }
 
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        return;
+    // Only if we don't have a location yet, try to get last known position (fast)
+    try {
+      Position? position = await Geolocator.getLastKnownPosition();
+
+      if (position != null && mounted) {
+        setState(() {
+          currentUserLocation = latlong.LatLng(
+            position.latitude,
+            position.longitude,
+          );
+        });
+
+        _mapController.move(
+          latlong.LatLng(position.latitude, position.longitude),
+          15.0,
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location not available yet')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location not available')),
+        );
       }
     }
-
-    if (permission == LocationPermission.deniedForever) {
-      return;
-    }
-
-    Position position = await Geolocator.getCurrentPosition();
-    setState(() {
-      currentUserLocation = latlong.LatLng(
-        position.latitude,
-        position.longitude,
-      );
-    });
-
-    _mapController.move(
-      latlong.LatLng(position.latitude, position.longitude),
-      15.0,
-    );
   }
 
   Future<void> _startNavigation(MapPinsRecord record) async {
+    print('🧭 Starting navigation to: ${record.name}');
     if (!record.hasLocation()) {
+      print('❌ Record has no location');
       return;
     }
 
     final userLoc = currentUserLocation;
     if (userLoc == null) {
+      print('⚠️ No user location available yet');
+      // Don't block - just trigger location fetch and return
+      _centerOnUser();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Waiting for your location...')),
+        const SnackBar(content: Text('Getting your location...')),
       );
-      await _centerOnUser();
       return;
     }
+
+    print('📍 User location: ${userLoc.latitude}, ${userLoc.longitude}');
 
     setState(() {
       _isFetchingRoute = true;
       _routeTargetName = record.name;
       _routePoints = null;
       _routeEtaText = null;
+      _currentDestination = latlong.LatLng(
+        record.location!.latitude,
+        record.location!.longitude,
+      );
     });
 
-    final destination = latlong.LatLng(
-      record.location!.latitude,
-      record.location!.longitude,
-    );
+    final destination = _currentDestination!;
 
-    final result = await _fetchRoute(userLoc, destination);
+    // Fetch route in background
+    _fetchRoute(userLoc, destination).then((result) {
+      if (!mounted) return;
 
-    if (!mounted) return;
+      if (result == null) {
+        setState(() {
+          _isFetchingRoute = false;
+          _routeTargetName = null;
+          _routePoints = null;
+          _routeEtaText = null;
+          _currentDestination = null;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to build route right now.')),
+        );
+        return;
+      }
 
-    if (result == null) {
       setState(() {
         _isFetchingRoute = false;
-        _routeTargetName = null;
-        _routePoints = null;
-        _routeEtaText = null;
+        _routePoints = result.points;
+        _routeEtaText = result.etaText;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to build route right now.')),
-      );
-      return;
-    }
 
-    setState(() {
-      _isFetchingRoute = false;
-      _routePoints = result.points;
-      _routeEtaText = result.etaText;
+      _fitRouteBounds(result.points);
     });
-
-    _fitRouteBounds(result.points);
   }
 
   Future<RouteResult?> _fetchRoute(
     latlong.LatLng from,
     latlong.LatLng to,
   ) async {
-    if (mapboxAccessToken == null) return null;
+    if (mapboxAccessToken == null) {
+      print('❌ No Mapbox token available');
+      return null;
+    }
 
     final url = Uri.parse(
       'https://api.mapbox.com/directions/v5/mapbox/walking/${from.longitude},${from.latitude};${to.longitude},${to.latitude}?geometries=geojson&overview=full&access_token=$mapboxAccessToken',
     );
 
-    final response = await http.get(url);
-    if (response.statusCode != 200) return null;
+    print(
+        '🗺️ Fetching route from ${from.latitude},${from.longitude} to ${to.latitude},${to.longitude}');
 
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final routes = (data['routes'] as List?) ?? [];
-    if (routes.isEmpty) return null;
+    try {
+      final response = await http.get(url);
+      print('📡 Mapbox response status: ${response.statusCode}');
 
-    final route = routes.first as Map<String, dynamic>;
-    final geometry = route['geometry'] as Map<String, dynamic>?;
-    final coordinates = (geometry?['coordinates'] as List?) ?? [];
+      if (response.statusCode != 200) {
+        print('❌ Mapbox API error: ${response.body}');
+        return null;
+      }
 
-    final points = coordinates
-        .map<latlong.LatLng>((coord) => latlong.LatLng(
-              (coord[1] as num).toDouble(),
-              (coord[0] as num).toDouble(),
-            ))
-        .toList();
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final routes = (data['routes'] as List?) ?? [];
 
-    final durationSeconds = (route['duration'] as num?)?.toDouble();
-    if (durationSeconds == null || points.isEmpty) return null;
+      if (routes.isEmpty) {
+        print('❌ No routes found in response');
+        return null;
+      }
 
-    return RouteResult(
-      points: points,
-      etaText: _formatDuration(durationSeconds),
-    );
+      final route = routes.first as Map<String, dynamic>;
+      final geometry = route['geometry'] as Map<String, dynamic>?;
+      final coordinates = (geometry?['coordinates'] as List?) ?? [];
+
+      final points = coordinates
+          .map<latlong.LatLng>((coord) => latlong.LatLng(
+                (coord[1] as num).toDouble(),
+                (coord[0] as num).toDouble(),
+              ))
+          .toList();
+
+      final durationSeconds = (route['duration'] as num?)?.toDouble();
+      if (durationSeconds == null || points.isEmpty) {
+        print('❌ Invalid route data');
+        return null;
+      }
+
+      print(
+          '✅ Route fetched: ${points.length} points, ${_formatDuration(durationSeconds)}');
+
+      return RouteResult(
+        points: points,
+        etaText: _formatDuration(durationSeconds),
+      );
+    } catch (e) {
+      print('❌ Route fetch error: $e');
+      return null;
+    }
   }
 
   String _formatDuration(double seconds) {
@@ -253,6 +313,7 @@ class _MapWidgetState extends State<MapWidget> {
       _routeTargetName = null;
       _routeEtaText = null;
       _isFetchingRoute = false;
+      _currentDestination = null;
     });
   }
 
@@ -264,11 +325,109 @@ class _MapWidgetState extends State<MapWidget> {
     );
   }
 
+  /// Calculate bearing from one point to another (in radians)
+  double _calculateBearing(latlong.LatLng from, latlong.LatLng to) {
+    final lat1 = from.latitude * pi / 180;
+    final lat2 = to.latitude * pi / 180;
+    final dLon = (to.longitude - from.longitude) * pi / 180;
+
+    final y = sin(dLon) * cos(lat2);
+    final x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon);
+    final bearing = atan2(y, x);
+
+    return bearing; // Returns radians
+  }
+
+  Future<void> _checkAndStartInterventionNavigation() async {
+    // Wait a bit for location to be available
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    if (!mounted) return;
+
+    // Query for active intervention
+    final interventions = await queryInterventieRecord(
+      queryBuilder: (q) => q
+          .where('teamId', arrayContains: FFAppState().TeamId)
+          .where('status', isEqualTo: Statusinterventie.active.serialize()),
+      limit: 1,
+    ).first;
+
+    if (interventions.isEmpty) return;
+
+    final intervention = interventions.first;
+    if (intervention.connectionId == null) return;
+
+    // Get connection location
+    final connection =
+        await ConnectionRecord.getDocumentOnce(intervention.connectionId!);
+    if (!connection.hasLocation()) return;
+
+    final destination = latlong.LatLng(
+      connection.location!.latitude,
+      connection.location!.longitude,
+    );
+
+    // Start navigation
+    if (mounted) {
+      _startNavigationToPoint(destination, 'Interventie Locatie');
+    }
+  }
+
+  Future<void> _startNavigationToPoint(
+      latlong.LatLng destination, String name) async {
+    final userLoc = currentUserLocation;
+
+    // If we don't have user location yet, try to get it once
+    if (userLoc == null) {
+      _centerOnUser();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Getting your location...')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isFetchingRoute = true;
+      _routeTargetName = name;
+      _routePoints = null;
+      _routeEtaText = null;
+      _currentDestination = destination;
+    });
+
+    // Fetch route in background
+    _fetchRoute(currentUserLocation!, destination).then((result) {
+      if (!mounted) return;
+
+      if (result == null) {
+        setState(() {
+          _isFetchingRoute = false;
+          _routeTargetName = null;
+          _routePoints = null;
+          _routeEtaText = null;
+          _currentDestination = null;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to build route right now.')),
+        );
+        return;
+      }
+
+      setState(() {
+        _isFetchingRoute = false;
+        _routePoints = result.points;
+        _routeEtaText = result.etaText;
+      });
+
+      _fitRouteBounds(result.points);
+    });
+  }
+
   @override
   void dispose() {
     _model.dispose();
     _positionStreamSubscription?.cancel();
     _compassSubscription?.cancel();
+    print('🛑 Map disposed - stopped location and compass updates');
     super.dispose();
   }
 
@@ -404,338 +563,478 @@ class _MapWidgetState extends State<MapWidget> {
                                     hasLocation = true;
                                   }
 
-                                  return StreamBuilder<List<MapPinsRecord>>(
-                                    stream: queryMapPinsRecord(
-                                      queryBuilder: eventRef != null
-                                          ? (q) => q.where('eventRef',
-                                              isEqualTo: eventRef)
-                                          : null,
-                                    ),
-                                    builder: (context, pinsSnapshot) {
-                                      if (!pinsSnapshot.hasData) {
-                                        return Center(
-                                          child: SizedBox(
-                                            width: 50.0,
-                                            height: 50.0,
-                                            child: CircularProgressIndicator(
-                                              valueColor:
-                                                  AlwaysStoppedAnimation<Color>(
-                                                FlutterFlowTheme.of(context)
-                                                    .primary,
-                                              ),
-                                            ),
+                                  return StreamBuilder<List<InterventieRecord>>(
+                                    stream: queryInterventieRecord(
+                                      queryBuilder: (q) => q
+                                          .where(
+                                            'teamId',
+                                            arrayContains: FFAppState().TeamId,
+                                          )
+                                          .where(
+                                            'status',
+                                            isEqualTo: Statusinterventie.active
+                                                .serialize(),
                                           ),
-                                        );
-                                      }
+                                      limit: 1,
+                                    ),
+                                    builder: (context, interventionSnapshot) {
+                                      final activeIntervention =
+                                          interventionSnapshot.hasData &&
+                                                  interventionSnapshot
+                                                      .data!.isNotEmpty
+                                              ? interventionSnapshot.data!.first
+                                              : null;
 
-                                      List<MapPinsRecord> mapPinsRecordList =
-                                          pinsSnapshot.data!;
+                                      return StreamBuilder<ConnectionRecord>(
+                                        stream:
+                                            activeIntervention?.connectionId !=
+                                                    null
+                                                ? ConnectionRecord.getDocument(
+                                                    activeIntervention!
+                                                        .connectionId!)
+                                                : null,
+                                        builder: (context, connectionSnapshot) {
+                                          latlong.LatLng?
+                                              activeInterventionLocation;
+                                          if (connectionSnapshot.hasData &&
+                                              connectionSnapshot.data!
+                                                  .hasLocation()) {
+                                            activeInterventionLocation =
+                                                latlong.LatLng(
+                                              connectionSnapshot
+                                                  .data!.location!.latitude,
+                                              connectionSnapshot
+                                                  .data!.location!.longitude,
+                                            );
+                                          }
 
-                                      // Calculate distances if user location is known
-                                      final userLoc = currentUserLocation;
-                                      if (userLoc != null) {
-                                        mapPinsRecordList.sort((a, b) {
-                                          if (!a.hasLocation() ||
-                                              !b.hasLocation()) return 0;
-                                          final distA =
-                                              Geolocator.distanceBetween(
-                                            userLoc.latitude,
-                                            userLoc.longitude,
-                                            a.location!.latitude,
-                                            a.location!.longitude,
-                                          );
-                                          final distB =
-                                              Geolocator.distanceBetween(
-                                            userLoc.latitude,
-                                            userLoc.longitude,
-                                            b.location!.latitude,
-                                            b.location!.longitude,
-                                          );
-                                          return distA.compareTo(distB);
-                                        });
-                                      }
-
-                                      return Stack(
-                                        children: [
-                                          FlutterMap(
-                                            mapController: _mapController,
-                                            options: MapOptions(
-                                              initialCenter: centerLocation,
-                                              initialZoom: 13.0,
-                                              onMapReady: () {
-                                                _centerOnUser();
-                                              },
+                                          return StreamBuilder<
+                                              List<MapPinsRecord>>(
+                                            stream: queryMapPinsRecord(
+                                              queryBuilder: eventRef != null
+                                                  ? (q) => q.where('eventRef',
+                                                      isEqualTo: eventRef)
+                                                  : null,
                                             ),
-                                            children: [
-                                              TileLayer(
-                                                urlTemplate:
-                                                    'https://api.mapbox.com/styles/v1/mapbox/streets-v11/tiles/{z}/{x}/{y}?access_token=$mapboxAccessToken',
-                                                additionalOptions: {
-                                                  'accessToken':
-                                                      mapboxAccessToken!,
-                                                },
-                                              ),
-                                              MarkerLayer(
-                                                markers: [
-                                                  ...mapPinsRecordList
-                                                      .map((mapPinsRecord) {
-                                                        return mapPinsRecord
-                                                                .hasLocation()
-                                                            ? Marker(
-                                                                width: 50.0,
-                                                                height: 50.0,
-                                                                point: latlong
-                                                                    .LatLng(
-                                                                  mapPinsRecord
-                                                                      .location!
-                                                                      .latitude,
-                                                                  mapPinsRecord
-                                                                      .location!
-                                                                      .longitude,
-                                                                ),
-                                                                child:
-                                                                    GestureDetector(
-                                                                  onTap: () {
-                                                                    _showPinDetails(
-                                                                        context,
-                                                                        mapPinsRecord,
-                                                                        userLoc);
-                                                                  },
-                                                                  child: MapUtils
-                                                                      .getMarkerIcon(
-                                                                          mapPinsRecord
-                                                                              .iconType),
-                                                                ),
-                                                              )
-                                                            : null;
-                                                      })
-                                                      .where((marker) =>
-                                                          marker != null)
-                                                      .cast<Marker>()
-                                                      .toList(),
-                                                ],
-                                              ),
-                                              if (_routePoints != null)
-                                                PolylineLayer(
-                                                  polylines: [
-                                                    Polyline(
-                                                      points: _routePoints!,
-                                                      strokeWidth: 5,
-                                                      color: Colors.blueAccent,
-                                                    ),
-                                                  ],
-                                                ),
-                                              CurrentLocationLayer(
-                                                style: LocationMarkerStyle(
-                                                  marker: DefaultLocationMarker(
-                                                    color: Colors.blue,
-                                                    child: Transform.rotate(
-                                                      angle: currentHeading *
-                                                          (pi / 180),
-                                                      child: Icon(
-                                                        Icons.navigation,
-                                                        color: Colors.white,
-                                                        size: 16,
+                                            builder: (context, pinsSnapshot) {
+                                              if (!pinsSnapshot.hasData) {
+                                                return Center(
+                                                  child: SizedBox(
+                                                    width: 50.0,
+                                                    height: 50.0,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                      valueColor:
+                                                          AlwaysStoppedAnimation<
+                                                              Color>(
+                                                        FlutterFlowTheme.of(
+                                                                context)
+                                                            .primary,
                                                       ),
                                                     ),
                                                   ),
-                                                  markerSize:
-                                                      const Size(40, 40),
-                                                  accuracyCircleColor: Colors
-                                                      .blue
-                                                      .withOpacity(0.1),
-                                                  headingSectorColor: Colors
-                                                      .blue
-                                                      .withOpacity(0.25),
-                                                  headingSectorRadius: 120,
-                                                ),
-                                                alignPositionOnUpdate:
-                                                    AlignOnUpdate.never,
-                                                alignDirectionOnUpdate:
-                                                    AlignOnUpdate.never,
-                                              ),
-                                            ],
-                                          ),
-                                          DraggableScrollableSheet(
-                                            initialChildSize: 0.15,
-                                            minChildSize: 0.15,
-                                            maxChildSize: 0.6,
-                                            builder: (BuildContext context,
-                                                ScrollController
-                                                    scrollController) {
-                                              return Container(
-                                                decoration: BoxDecoration(
-                                                  color: FlutterFlowTheme.of(
-                                                          context)
-                                                      .secondaryBackground,
-                                                  borderRadius:
-                                                      const BorderRadius
-                                                          .vertical(
-                                                          top: Radius.circular(
-                                                              20)),
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      blurRadius: 10,
-                                                      color: Colors.black
-                                                          .withOpacity(0.1),
-                                                      spreadRadius: 2,
-                                                    )
-                                                  ],
-                                                ),
-                                                child: Column(
-                                                  children: [
-                                                    Center(
-                                                      child: Container(
-                                                        margin: const EdgeInsets
-                                                            .symmetric(
-                                                            vertical: 12),
-                                                        width: 40,
-                                                        height: 4,
+                                                );
+                                              }
+
+                                              List<MapPinsRecord>
+                                                  mapPinsRecordList =
+                                                  pinsSnapshot.data!;
+
+                                              // Calculate distances if user location is known
+                                              final userLoc =
+                                                  currentUserLocation;
+                                              if (userLoc != null) {
+                                                mapPinsRecordList.sort((a, b) {
+                                                  if (!a.hasLocation() ||
+                                                      !b.hasLocation())
+                                                    return 0;
+                                                  final distA = Geolocator
+                                                      .distanceBetween(
+                                                    userLoc.latitude,
+                                                    userLoc.longitude,
+                                                    a.location!.latitude,
+                                                    a.location!.longitude,
+                                                  );
+                                                  final distB = Geolocator
+                                                      .distanceBetween(
+                                                    userLoc.latitude,
+                                                    userLoc.longitude,
+                                                    b.location!.latitude,
+                                                    b.location!.longitude,
+                                                  );
+                                                  return distA.compareTo(distB);
+                                                });
+                                              }
+
+                                              return Stack(
+                                                children: [
+                                                  FlutterMap(
+                                                    mapController:
+                                                        _mapController,
+                                                    options: MapOptions(
+                                                      initialCenter:
+                                                          centerLocation,
+                                                      initialZoom: 13.0,
+                                                      onMapReady: () {
+                                                        _centerOnUser();
+                                                      },
+                                                    ),
+                                                    children: [
+                                                      TileLayer(
+                                                        urlTemplate:
+                                                            'https://api.mapbox.com/styles/v1/mapbox/streets-v11/tiles/{z}/{x}/{y}?access_token=$mapboxAccessToken',
+                                                        additionalOptions: {
+                                                          'accessToken':
+                                                              mapboxAccessToken!,
+                                                        },
+                                                      ),
+                                                      if (_routePoints != null)
+                                                        PolylineLayer(
+                                                          polylines: [
+                                                            Polyline(
+                                                              points:
+                                                                  _routePoints!,
+                                                              strokeWidth: 5,
+                                                              color: Colors
+                                                                  .blueAccent,
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      MarkerLayer(
+                                                        markers: [
+                                                          ...mapPinsRecordList
+                                                              .map(
+                                                                  (mapPinsRecord) {
+                                                                return mapPinsRecord
+                                                                        .hasLocation()
+                                                                    ? Marker(
+                                                                        width:
+                                                                            50.0,
+                                                                        height:
+                                                                            50.0,
+                                                                        point: latlong
+                                                                            .LatLng(
+                                                                          mapPinsRecord
+                                                                              .location!
+                                                                              .latitude,
+                                                                          mapPinsRecord
+                                                                              .location!
+                                                                              .longitude,
+                                                                        ),
+                                                                        child:
+                                                                            GestureDetector(
+                                                                          onTap:
+                                                                              () {
+                                                                            _showPinDetails(
+                                                                                context,
+                                                                                mapPinsRecord,
+                                                                                userLoc);
+                                                                          },
+                                                                          child:
+                                                                              MapUtils.getMarkerIcon(mapPinsRecord.iconType),
+                                                                        ),
+                                                                      )
+                                                                    : null;
+                                                              })
+                                                              .where((marker) =>
+                                                                  marker !=
+                                                                  null)
+                                                              .cast<Marker>()
+                                                              .toList(),
+                                                        ],
+                                                      ),
+                                                      if (_routePoints != null)
+                                                        PolylineLayer(
+                                                          polylines: [
+                                                            Polyline(
+                                                              points:
+                                                                  _routePoints!,
+                                                              strokeWidth: 5,
+                                                              color: Colors
+                                                                  .blueAccent,
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      CurrentLocationLayer(
+                                                        style:
+                                                            LocationMarkerStyle(
+                                                          marker:
+                                                              DefaultLocationMarker(
+                                                            color: Colors.blue,
+                                                            child: Transform
+                                                                .rotate(
+                                                              angle:
+                                                                  currentHeading *
+                                                                      (pi /
+                                                                          180),
+                                                              child: Icon(
+                                                                Icons
+                                                                    .navigation,
+                                                                color: Colors
+                                                                    .white,
+                                                                size: 16,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          markerSize:
+                                                              const Size(
+                                                                  40, 40),
+                                                          accuracyCircleColor:
+                                                              Colors.blue
+                                                                  .withOpacity(
+                                                                      0.1),
+                                                          headingSectorColor:
+                                                              Colors
+                                                                  .blue
+                                                                  .withOpacity(
+                                                                      0.25),
+                                                          headingSectorRadius:
+                                                              120,
+                                                        ),
+                                                        alignPositionOnUpdate:
+                                                            AlignOnUpdate.never,
+                                                        alignDirectionOnUpdate:
+                                                            AlignOnUpdate.never,
+                                                      ),
+                                                      if (activeInterventionLocation !=
+                                                          null)
+                                                        MarkerLayer(
+                                                          markers: [
+                                                            Marker(
+                                                              width: 40.0,
+                                                              height: 40.0,
+                                                              point:
+                                                                  activeInterventionLocation,
+                                                              child: Container(
+                                                                decoration:
+                                                                    BoxDecoration(
+                                                                  color: Colors
+                                                                      .red,
+                                                                  shape: BoxShape
+                                                                      .circle,
+                                                                  border: Border
+                                                                      .all(
+                                                                    color: Colors
+                                                                        .white,
+                                                                    width: 2.0,
+                                                                  ),
+                                                                  boxShadow: [
+                                                                    BoxShadow(
+                                                                      color: Colors
+                                                                          .black26,
+                                                                      blurRadius:
+                                                                          4,
+                                                                      offset:
+                                                                          Offset(
+                                                                              0,
+                                                                              2),
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                                child: Icon(
+                                                                  Icons
+                                                                      .priority_high_rounded,
+                                                                  color: Colors
+                                                                      .white,
+                                                                  size: 24.0,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                    ],
+                                                  ),
+                                                  DraggableScrollableSheet(
+                                                    initialChildSize: 0.15,
+                                                    minChildSize: 0.15,
+                                                    maxChildSize: 0.6,
+                                                    builder: (BuildContext
+                                                            context,
+                                                        ScrollController
+                                                            scrollController) {
+                                                      return Container(
                                                         decoration:
                                                             BoxDecoration(
                                                           color: FlutterFlowTheme
                                                                   .of(context)
-                                                              .alternate,
+                                                              .secondaryBackground,
                                                           borderRadius:
-                                                              BorderRadius
-                                                                  .circular(2),
+                                                              const BorderRadius
+                                                                  .vertical(
+                                                                  top: Radius
+                                                                      .circular(
+                                                                          20)),
+                                                          boxShadow: [
+                                                            BoxShadow(
+                                                              blurRadius: 10,
+                                                              color: Colors
+                                                                  .black
+                                                                  .withOpacity(
+                                                                      0.1),
+                                                              spreadRadius: 2,
+                                                            )
+                                                          ],
                                                         ),
-                                                      ),
-                                                    ),
-                                                    Padding(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                              bottom: 12.0),
-                                                      child: Text(
-                                                        'LOCATIONS',
-                                                        style:
-                                                            FlutterFlowTheme.of(
-                                                                    context)
-                                                                .labelMedium
-                                                                .override(
-                                                                  fontFamily:
-                                                                      'Inter',
-                                                                  letterSpacing:
-                                                                      1.5,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .bold,
-                                                                ),
-                                                      ),
-                                                    ),
-                                                    Expanded(
-                                                      child: ListView.separated(
-                                                        controller:
-                                                            scrollController,
-                                                        padding:
-                                                            EdgeInsets.zero,
-                                                        itemCount:
-                                                            mapPinsRecordList
-                                                                .length,
-                                                        separatorBuilder: (context,
-                                                                index) =>
-                                                            Divider(
-                                                                height: 1,
-                                                                color: FlutterFlowTheme.of(
-                                                                        context)
-                                                                    .alternate),
-                                                        itemBuilder:
-                                                            (context, index) {
-                                                          final record =
-                                                              mapPinsRecordList[
-                                                                  index];
-                                                          final dist = userLoc !=
-                                                                      null &&
-                                                                  record
-                                                                      .hasLocation()
-                                                              ? (Geolocator
-                                                                          .distanceBetween(
-                                                                        userLoc
-                                                                            .latitude,
-                                                                        userLoc
-                                                                            .longitude,
-                                                                        record
-                                                                            .location!
-                                                                            .latitude,
-                                                                        record
-                                                                            .location!
-                                                                            .longitude,
-                                                                      ) /
-                                                                      1000)
-                                                                  .toStringAsFixed(
-                                                                      1)
-                                                              : null;
-
-                                                          return ListTile(
-                                                            leading: Column(
-                                                              mainAxisAlignment:
-                                                                  MainAxisAlignment
-                                                                      .center,
-                                                              children: [
-                                                                MapUtils.getMarkerIcon(
-                                                                    record
-                                                                        .iconType,
-                                                                    size: 30),
-                                                              ],
-                                                            ),
-                                                            title: Text(
-                                                              record.name,
-                                                              style: FlutterFlowTheme
-                                                                      .of(context)
-                                                                  .bodyLarge
-                                                                  .override(
-                                                                    fontFamily:
-                                                                        'Inter',
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w600,
+                                                        child:
+                                                            SingleChildScrollView(
+                                                          controller:
+                                                              scrollController,
+                                                          child: Column(
+                                                            children: [
+                                                              Center(
+                                                                child:
+                                                                    Container(
+                                                                  margin: const EdgeInsets
+                                                                      .symmetric(
+                                                                      vertical:
+                                                                          12),
+                                                                  width: 40,
+                                                                  height: 4,
+                                                                  decoration:
+                                                                      BoxDecoration(
+                                                                    color: FlutterFlowTheme.of(
+                                                                            context)
+                                                                        .alternate,
+                                                                    borderRadius:
+                                                                        BorderRadius
+                                                                            .circular(2),
                                                                   ),
-                                                            ),
-                                                            subtitle:
-                                                                dist != null
-                                                                    ? Text(
-                                                                        '$dist km',
-                                                                        style: FlutterFlowTheme.of(context)
-                                                                            .bodySmall,
-                                                                      )
-                                                                    : null,
-                                                            onTap: () {
-                                                              if (record
-                                                                  .hasLocation()) {
-                                                                _mapController.move(
-                                                                    latlong.LatLng(
-                                                                        record
-                                                                            .location!
-                                                                            .latitude,
-                                                                        record
-                                                                            .location!
-                                                                            .longitude),
-                                                                    15);
-                                                              }
-                                                            },
-                                                            trailing:
-                                                                IconButton(
-                                                              icon: const Icon(
-                                                                  Icons
-                                                                      .navigation),
-                                                              color: FlutterFlowTheme
-                                                                      .of(context)
-                                                                  .primary,
-                                                              onPressed: () {
-                                                                _startNavigation(
-                                                                    record);
-                                                              },
-                                                            ),
-                                                          );
-                                                        },
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
+                                                                ),
+                                                              ),
+                                                              Padding(
+                                                                padding:
+                                                                    const EdgeInsets
+                                                                        .only(
+                                                                        bottom:
+                                                                            12.0),
+                                                                child: Text(
+                                                                  'LOCATIONS',
+                                                                  style: FlutterFlowTheme.of(
+                                                                          context)
+                                                                      .labelMedium
+                                                                      .override(
+                                                                        fontFamily:
+                                                                            'Inter',
+                                                                        letterSpacing:
+                                                                            1.5,
+                                                                        fontWeight:
+                                                                            FontWeight.bold,
+                                                                      ),
+                                                                ),
+                                                              ),
+                                                              ListView
+                                                                  .separated(
+                                                                shrinkWrap:
+                                                                    true,
+                                                                physics:
+                                                                    const NeverScrollableScrollPhysics(),
+                                                                padding:
+                                                                    EdgeInsets
+                                                                        .zero,
+                                                                itemCount:
+                                                                    mapPinsRecordList
+                                                                        .length,
+                                                                separatorBuilder: (context,
+                                                                        index) =>
+                                                                    Divider(
+                                                                        height:
+                                                                            1,
+                                                                        color: FlutterFlowTheme.of(context)
+                                                                            .alternate),
+                                                                itemBuilder:
+                                                                    (context,
+                                                                        index) {
+                                                                  final record =
+                                                                      mapPinsRecordList[
+                                                                          index];
+                                                                  final dist = userLoc !=
+                                                                              null &&
+                                                                          record
+                                                                              .hasLocation()
+                                                                      ? (Geolocator.distanceBetween(
+                                                                                userLoc.latitude,
+                                                                                userLoc.longitude,
+                                                                                record.location!.latitude,
+                                                                                record.location!.longitude,
+                                                                              ) /
+                                                                              1000)
+                                                                          .toStringAsFixed(1)
+                                                                      : null;
+
+                                                                  return ListTile(
+                                                                    leading:
+                                                                        Column(
+                                                                      mainAxisAlignment:
+                                                                          MainAxisAlignment
+                                                                              .center,
+                                                                      children: [
+                                                                        MapUtils.getMarkerIcon(
+                                                                            record
+                                                                                .iconType,
+                                                                            size:
+                                                                                30),
+                                                                      ],
+                                                                    ),
+                                                                    title: Text(
+                                                                      record
+                                                                          .name,
+                                                                      style: FlutterFlowTheme.of(
+                                                                              context)
+                                                                          .bodyLarge
+                                                                          .override(
+                                                                            fontFamily:
+                                                                                'Inter',
+                                                                            fontWeight:
+                                                                                FontWeight.w600,
+                                                                          ),
+                                                                    ),
+                                                                    subtitle: dist !=
+                                                                            null
+                                                                        ? Text(
+                                                                            '$dist km',
+                                                                            style:
+                                                                                FlutterFlowTheme.of(context).bodySmall,
+                                                                          )
+                                                                        : null,
+                                                                    onTap: () {
+                                                                      if (record
+                                                                          .hasLocation()) {
+                                                                        _mapController.move(
+                                                                            latlong.LatLng(record.location!.latitude,
+                                                                                record.location!.longitude),
+                                                                            15);
+                                                                      }
+                                                                    },
+                                                                    trailing:
+                                                                        IconButton(
+                                                                      icon: const Icon(
+                                                                          Icons
+                                                                              .navigation),
+                                                                      color: FlutterFlowTheme.of(
+                                                                              context)
+                                                                          .primary,
+                                                                      onPressed:
+                                                                          () {
+                                                                        print(
+                                                                            '🔘 Navigation button pressed for: ${record.name}');
+                                                                        _startNavigation(
+                                                                            record);
+                                                                      },
+                                                                    ),
+                                                                  );
+                                                                },
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      );
+                                                    },
+                                                  ),
+                                                ],
                                               );
                                             },
-                                          ),
-                                        ],
+                                          );
+                                        },
                                       );
                                     },
                                   );
@@ -764,14 +1063,6 @@ class _MapWidgetState extends State<MapWidget> {
                   ),
                 ),
               ),
-              Align(
-                alignment: AlignmentDirectional(0.0, 1.0),
-                child: wrapWithModel(
-                  model: _model.navigationModel,
-                  updateCallback: () => safeSetState(() {}),
-                  child: NavigationWidget(page: 'Map'),
-                ),
-              ),
               if (_routeTargetName != null)
                 Align(
                   alignment: const AlignmentDirectional(0.0, -0.95),
@@ -780,6 +1071,12 @@ class _MapWidgetState extends State<MapWidget> {
                     isCalculating: _isFetchingRoute,
                     etaText: _routeEtaText,
                     onClose: _clearRoute,
+                    bearing: currentUserLocation != null &&
+                            _currentDestination != null
+                        ? _calculateBearing(
+                            currentUserLocation!, _currentDestination!)
+                        : null,
+                    currentHeading: currentHeading,
                   ),
                 ),
             ],
@@ -815,19 +1112,42 @@ class _MapWidgetState extends State<MapWidget> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                record.name,
-                style: FlutterFlowTheme.of(context).headlineMedium,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          record.name,
+                          style: FlutterFlowTheme.of(context).headlineMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        if (dist != null)
+                          Text(
+                            '$dist km away',
+                            style: FlutterFlowTheme.of(context)
+                                .bodyMedium
+                                .override(
+                                  fontFamily: 'Inter',
+                                  color: FlutterFlowTheme.of(context)
+                                      .secondaryText,
+                                ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.navigation, size: 32),
+                    color: FlutterFlowTheme.of(context).primary,
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _startNavigation(record);
+                    },
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              if (dist != null)
-                Text(
-                  '$dist km away',
-                  style: FlutterFlowTheme.of(context).bodyMedium.override(
-                        fontFamily: 'Inter',
-                        color: FlutterFlowTheme.of(context).secondaryText,
-                      ),
-                ),
               const SizedBox(height: 16),
             ],
           ),

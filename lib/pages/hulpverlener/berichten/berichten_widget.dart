@@ -1,5 +1,5 @@
 import '/backend/backend.dart';
-import '/components/navigation_widget.dart';
+
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
@@ -117,11 +117,12 @@ class _BerichtenWidgetState extends State<BerichtenWidget> {
                       child: StreamBuilder<List<MessagesRecord>>(
                         stream: queryMessagesRecord(
                           parent: FFAppState().TeamId,
-                          queryBuilder: (messagesRecord) =>
-                              messagesRecord.where(
-                            'Time',
-                            isGreaterThan: getCurrentTimestamp,
-                          ),
+                          queryBuilder: (messagesRecord) => messagesRecord
+                              .where(
+                                'Time',
+                                isGreaterThan: FFAppState().StartTime,
+                              )
+                              .orderBy('Time', descending: true),
                         ),
                         builder: (context, snapshot) {
                           // Customize what your widget looks like when it's loading.
@@ -312,7 +313,7 @@ class _BerichtenWidgetState extends State<BerichtenWidget> {
                                                 ),
                                               ),
                                             );
-                                          }),
+                                          }).divide(SizedBox(height: 8.0)),
                                         ),
                                       );
                                     },
@@ -384,16 +385,6 @@ class _BerichtenWidgetState extends State<BerichtenWidget> {
                       ),
                     ),
                   ],
-                ),
-              ),
-              Align(
-                alignment: AlignmentDirectional(0.0, 1.0),
-                child: wrapWithModel(
-                  model: _model.navigationModel,
-                  updateCallback: () => safeSetState(() {}),
-                  child: NavigationWidget(
-                    page: 'Berichten',
-                  ),
                 ),
               ),
             ],

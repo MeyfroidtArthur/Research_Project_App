@@ -1,7 +1,6 @@
 import '/backend/backend.dart';
 import '/backend/schema/enums/enums.dart';
 import '/components/end_intervention_widget.dart';
-import '/components/navigation_widget.dart';
 import '/flutter_flow/flutter_flow_drop_down.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -1025,8 +1024,13 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
                                                   ),
                                                   FFButtonWidget(
                                                     onPressed: () {
-                                                      print(
-                                                          'Button pressed ...');
+                                                      // Set flag to trigger navigation route creation
+                                                      MapWidget
+                                                              .shouldStartNavigationToIntervention =
+                                                          true;
+                                                      context.pushNamed(
+                                                        MapWidget.routeName,
+                                                      );
                                                     },
                                                     text:
                                                         'Bekijk locatie op kaart',
@@ -1265,8 +1269,8 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
                                   'Time',
                                   isGreaterThan: FFAppState().StartTime,
                                 )
-                                .orderBy('Time', descending: true),
-                            limit: 3,
+                                .orderBy('Time', descending: true)
+                                .limit(3),
                           ),
                           builder: (context, snapshot) {
                             // Customize what your widget looks like when it's loading.
@@ -1457,7 +1461,7 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
                                                 ),
                                               ),
                                             );
-                                          }),
+                                          }).divide(SizedBox(height: 8.0)),
                                         );
                                       },
                                     ),
@@ -1538,16 +1542,6 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
                         ),
                       ),
                     ].divide(SizedBox(height: 16.0)),
-                  ),
-                ),
-              ),
-              Align(
-                alignment: AlignmentDirectional(0.0, 1.0),
-                child: wrapWithModel(
-                  model: _model.navigationModel,
-                  updateCallback: () => safeSetState(() {}),
-                  child: NavigationWidget(
-                    page: 'Home',
                   ),
                 ),
               ),

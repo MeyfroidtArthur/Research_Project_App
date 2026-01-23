@@ -77,6 +77,7 @@ class _SlachtofferHomeWidgetState extends State<SlachtofferHomeWidget> {
                       kTransitionInfoKey: TransitionInfo(
                         hasTransition: true,
                         transitionType: PageTransitionType.fade,
+                        duration: Duration(milliseconds: 200),
                       ),
                     },
                   );
@@ -189,6 +190,7 @@ class _SlachtofferHomeWidgetState extends State<SlachtofferHomeWidget> {
                                           hasTransition: true,
                                           transitionType:
                                               PageTransitionType.fade,
+                                          duration: Duration(milliseconds: 200),
                                         ),
                                       },
                                     );

@@ -220,3 +220,96 @@ class _NavBarPageState extends State<NavBarPage> {
     );
   }
 }
+
+class HulpverlenerNavBarPage extends StatefulWidget {
+  HulpverlenerNavBarPage({
+    Key? key,
+    this.initialPage,
+    this.page,
+    this.disableResizeToAvoidBottomInset = false,
+  }) : super(key: key);
+
+  final String? initialPage;
+  final Widget? page;
+  final bool disableResizeToAvoidBottomInset;
+
+  @override
+  _HulpverlenerNavBarPageState createState() => _HulpverlenerNavBarPageState();
+}
+
+/// This is the private State class that goes with HulpverlenerNavBarPage.
+class _HulpverlenerNavBarPageState extends State<HulpverlenerNavBarPage> {
+  String _currentPageName = 'HulpverlenerHome';
+  late Widget? _currentPage;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentPageName = widget.initialPage ?? _currentPageName;
+    _currentPage = widget.page;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tabs = {
+      'HulpverlenerHome': HulpverlenerHomeWidget(),
+      'Berichten': BerichtenWidget(),
+      'Map': MapWidget(),
+    };
+    final currentIndex = tabs.keys.toList().indexOf(_currentPageName);
+
+    return Scaffold(
+      resizeToAvoidBottomInset: !widget.disableResizeToAvoidBottomInset,
+      body: _currentPage ?? tabs[_currentPageName],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: currentIndex,
+        onTap: (i) => safeSetState(() {
+          _currentPage = null;
+          _currentPageName = tabs.keys.toList()[i];
+        }),
+        backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
+        selectedItemColor: FlutterFlowTheme.of(context).primary,
+        unselectedItemColor: FlutterFlowTheme.of(context).secondaryText,
+        showSelectedLabels: true,
+        showUnselectedLabels: true,
+        type: BottomNavigationBarType.fixed,
+        items: <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(
+              FFIcons.khouse,
+            ),
+            activeIcon: Icon(
+              FFIcons.khouseBold,
+            ),
+            label: 'Home',
+            tooltip: '',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(
+              FFIcons.kenvelope,
+              size: 24.0,
+            ),
+            activeIcon: Icon(
+              FFIcons.kenvelopeBold,
+              size: 24.0,
+            ),
+            label: 'Berichten',
+            tooltip: '',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(
+              FFIcons.kmapPin,
+              size: 24.0,
+            ),
+            activeIcon: Icon(
+              FFIcons.kmapPinBold,
+              size: 24.0,
+            ),
+            label: 'Map',
+            tooltip: '',
+          )
+        ],
+      ),
+    );
+  }
+}

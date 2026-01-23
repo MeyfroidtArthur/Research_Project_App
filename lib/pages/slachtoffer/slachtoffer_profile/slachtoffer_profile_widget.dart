@@ -110,6 +110,7 @@ class _SlachtofferProfileWidgetState extends State<SlachtofferProfileWidget> {
                       kTransitionInfoKey: TransitionInfo(
                         hasTransition: true,
                         transitionType: PageTransitionType.fade,
+                        duration: Duration(milliseconds: 200),
                       ),
                     },
                   );
