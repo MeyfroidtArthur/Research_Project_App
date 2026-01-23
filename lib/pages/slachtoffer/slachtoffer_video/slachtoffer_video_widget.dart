@@ -35,11 +35,11 @@ class _SlachtofferVideoWidgetState extends State<SlachtofferVideoWidget> {
   void initState() {
     super.initState();
     _model = createModel(context, () => SlachtofferVideoModel());
-    
+
     // Initialize text controller for chat input
     _model.textController ??= TextEditingController();
     _model.textFieldFocusNode ??= FocusNode();
-    
+
     _locationService = BackgroundLocationService();
     _notificationService = NotificationService();
     _previousStatus = null;
