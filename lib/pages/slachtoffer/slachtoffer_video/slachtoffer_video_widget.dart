@@ -46,7 +46,7 @@ class _SlachtofferVideoWidgetState extends State<SlachtofferVideoWidget> {
     _locationService = BackgroundLocationService();
     _notificationService = NotificationService();
     _previousStatus = null;
-    
+
     // Initialize Gemini AI for severity assessment
     _initializeGemini();
 
@@ -92,13 +92,14 @@ Always be compassionate and reassuring. Keep responses short and clear. NEVER fo
         ),
       );
       _chatSession = generativeModel.startChat();
-      
+
       // Send initial welcome message
       try {
         await ChatsRecord.createDoc(FFAppState().Call.refrence!)
             .set(createChatsRecordData(
           sender: 'Dispatch',
-          message: '👋 Hello! I\'m an AI triage assistant from the Red Cross. I\'m here to help assess your situation. Can you tell me what happened and what symptoms or injuries are involved? (e.g., bleeding, can\'t walk, breathing difficulty, chest pain, unconscious)',
+          message:
+              '👋 Hello! I\'m an AI triage assistant from the Red Cross. I\'m here to help assess your situation. Can you tell me what happened and what symptoms or injuries are involved? (e.g., bleeding, can\'t walk, breathing difficulty, chest pain, unconscious)',
           timestamp: getCurrentTimestamp,
         ));
       } catch (e) {
@@ -122,8 +123,10 @@ Always be compassionate and reassuring. Keep responses short and clear. NEVER fo
       ));
 
       // Get AI response
-      final response = await _chatSession!.sendMessage(Content.text(userMessage));
-      final aiResponse = response.text ?? "I couldn't process that. Can you tell me more?";
+      final response =
+          await _chatSession!.sendMessage(Content.text(userMessage));
+      final aiResponse =
+          response.text ?? "I couldn't process that. Can you tell me more?";
 
       // Clean response for display (remove tags)
       final cleanResponse = aiResponse
@@ -142,32 +145,37 @@ Always be compassionate and reassuring. Keep responses short and clear. NEVER fo
       // Check if response contains severity level and update ermergencyLevel
       int? detectedLevel;
       final lowerResponse = aiResponse.toLowerCase();
-      
+
       // Debug: print the response for testing
       print('📊 AI Response for level detection: $aiResponse');
-      
+
       // First, look for [[levelX]] tags
-      if (aiResponse.contains('[[level3]]') || aiResponse.contains('[[LEVEL3]]')) {
+      if (aiResponse.contains('[[level3]]') ||
+          aiResponse.contains('[[LEVEL3]]')) {
         detectedLevel = 3;
         print('✅ Detected severity level from [[level3]] tag');
-      } else if (aiResponse.contains('[[level2]]') || aiResponse.contains('[[LEVEL2]]')) {
+      } else if (aiResponse.contains('[[level2]]') ||
+          aiResponse.contains('[[LEVEL2]]')) {
         detectedLevel = 2;
         print('✅ Detected severity level from [[level2]] tag');
-      } else if (aiResponse.contains('[[level1]]') || aiResponse.contains('[[LEVEL1]]')) {
+      } else if (aiResponse.contains('[[level1]]') ||
+          aiResponse.contains('[[LEVEL1]]')) {
         detectedLevel = 1;
         print('✅ Detected severity level from [[level1]] tag');
       } else {
         // Fallback: look for [SEVERITY: X] pattern
-        final severityPattern = RegExp(r'\[SEVERITY:\s*(\d)\]', caseSensitive: false);
+        final severityPattern =
+            RegExp(r'\[SEVERITY:\s*(\d)\]', caseSensitive: false);
         final severityMatch = severityPattern.firstMatch(aiResponse);
-        
+
         if (severityMatch != null) {
           final levelStr = severityMatch.group(1);
           detectedLevel = int.tryParse(levelStr ?? '');
-          print('✅ Detected severity level from [SEVERITY: X] tag: $detectedLevel');
+          print(
+              '✅ Detected severity level from [SEVERITY: X] tag: $detectedLevel');
         } else {
           // Final fallback: check for keywords if tags not found
-          if (lowerResponse.contains('level 3') || 
+          if (lowerResponse.contains('level 3') ||
               lowerResponse.contains('critical') ||
               lowerResponse.contains('life-threatening') ||
               lowerResponse.contains('severe') ||
@@ -175,17 +183,15 @@ Always be compassionate and reassuring. Keep responses short and clear. NEVER fo
               lowerResponse.contains('breathing') ||
               lowerResponse.contains('poison')) {
             detectedLevel = 3;
-          } 
-          else if (lowerResponse.contains('level 2') || 
-                   lowerResponse.contains('urgent') ||
-                   lowerResponse.contains('important') ||
-                   lowerResponse.contains('significant trauma')) {
+          } else if (lowerResponse.contains('level 2') ||
+              lowerResponse.contains('urgent') ||
+              lowerResponse.contains('important') ||
+              lowerResponse.contains('significant trauma')) {
             detectedLevel = 2;
-          } 
-          else if (lowerResponse.contains('level 1') || 
-                   lowerResponse.contains('non-emergency') ||
-                   lowerResponse.contains('minor') ||
-                   lowerResponse.contains('first aid')) {
+          } else if (lowerResponse.contains('level 1') ||
+              lowerResponse.contains('non-emergency') ||
+              lowerResponse.contains('minor') ||
+              lowerResponse.contains('first aid')) {
             detectedLevel = 1;
           }
           if (detectedLevel != null) {
@@ -199,8 +205,8 @@ Always be compassionate and reassuring. Keep responses short and clear. NEVER fo
         print('🚨 Emergency Level Detected: Level $detectedLevel');
         try {
           await FFAppState().Call.refrence!.update(createConnectionRecordData(
-            ermergencyLevel: detectedLevel,
-          ));
+                ermergencyLevel: detectedLevel,
+              ));
           print('✅ Emergency Level Updated Successfully to: $detectedLevel');
         } catch (updateError) {
           print('❌ Error updating emergency level: $updateError');
@@ -323,7 +329,7 @@ Always be compassionate and reassuring. Keep responses short and clear. NEVER fo
             if (oldStatus == Statuscall.waiting &&
                 slachtofferVideoConnectionRecord.status == Statuscall.active) {
               print('📢 Showing call accepted notification');
-              
+
               // Send dispatch takeover message
               try {
                 await ChatsRecord.createDoc(FFAppState().Call.refrence!)
@@ -335,7 +341,7 @@ Always be compassionate and reassuring. Keep responses short and clear. NEVER fo
               } catch (e) {
                 print('Error sending dispatch takeover message: $e');
               }
-              
+
               try {
                 await NotificationService.showNow(
                   id: 1001,
