@@ -240,14 +240,6 @@ class WebRTCService {
     }
   }
 
-  void toggleSpeaker() {
-    // Basic toggle, though we might need track state tracking
-    // For now assumes it starts as true.
-    // Helper.setSpeakerphoneOn(!currentStatus);
-    // This is stateful on the native side, but ideally we track it.
-    // Let's just expose setSpeakerphone
-  }
-
   Future<void> setSpeaker(bool enabled) async {
     await Helper.setSpeakerphoneOn(enabled);
   }

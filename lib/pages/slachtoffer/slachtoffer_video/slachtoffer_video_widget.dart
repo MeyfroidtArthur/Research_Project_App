@@ -7,6 +7,7 @@ import '/index.dart';
 import '/services/background_location_service.dart';
 import '/services/notification_service.dart';
 import 'package:flutter/material.dart';
+import '/pages/slachtoffer/slachtoffer_home/slachtoffer_home_widget.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:geolocator/geolocator.dart';
@@ -476,12 +477,28 @@ Always be compassionate and reassuring. Keep responses short and clear. NEVER fo
             } else if (slachtofferVideoConnectionRecord.status ==
                 Statuscall.ended) {
               // Stop location tracking when call ends
-              print('🛑 Slachtoffer: Stopping location tracking');
+              print(
+                  '🛑 Slachtoffer: Stopping location tracking and ending call');
               try {
                 await _locationService.stopTracking();
-                print('✅ Slachtoffer: Location tracking stopped');
+                await _webrtcService.hangUp(FFAppState().Call.refrence!);
+                print('✅ Slachtoffer: Services stopped');
+
+                // Navigate back to main menu
+                if (mounted) {
+                  context.pushNamed(
+                    SlachtofferHomeWidget.routeName,
+                    extra: <String, dynamic>{
+                      kTransitionInfoKey: TransitionInfo(
+                        hasTransition: true,
+                        transitionType: PageTransitionType.fade,
+                        duration: Duration(milliseconds: 200),
+                      ),
+                    },
+                  );
+                }
               } catch (e) {
-                print('❌ Slachtoffer: Error stopping location tracking: $e');
+                print('❌ Slachtoffer: Error stopping services: $e');
               }
             }
           } else {
@@ -815,23 +832,36 @@ Always be compassionate and reassuring. Keep responses short and clear. NEVER fo
                             SizedBox(height: 12),
                             FFButtonWidget(
                               onPressed: () async {
-                                context.pushNamed(
-                                  SlachtofferHomeWidget.routeName,
-                                  extra: <String, dynamic>{
-                                    kTransitionInfoKey: TransitionInfo(
-                                      hasTransition: true,
-                                      transitionType: PageTransitionType.fade,
-                                      duration: Duration(milliseconds: 200),
-                                    ),
-                                  },
-                                );
+                                // Update status to ended to notify dispatcher
+                                try {
+                                  await slachtofferVideoConnectionRecord
+                                      .reference
+                                      .update({'status': 'ended'});
+                                } catch (e) {
+                                  print('Error updating status to ended: $e');
+                                }
 
                                 // Reset AppState
                                 FFAppState().deleteCall();
                                 FFAppState().Call = ActiveCallStruct();
 
-                                // Stop tracking
+                                // Stop services
                                 await _locationService.stopTracking();
+                                await _webrtcService.hangUp(
+                                    slachtofferVideoConnectionRecord.reference);
+
+                                if (mounted) {
+                                  context.pushNamed(
+                                    SlachtofferHomeWidget.routeName,
+                                    extra: <String, dynamic>{
+                                      kTransitionInfoKey: TransitionInfo(
+                                        hasTransition: true,
+                                        transitionType: PageTransitionType.fade,
+                                        duration: Duration(milliseconds: 200),
+                                      ),
+                                    },
+                                  );
+                                }
 
                                 safeSetState(() {});
                               },
