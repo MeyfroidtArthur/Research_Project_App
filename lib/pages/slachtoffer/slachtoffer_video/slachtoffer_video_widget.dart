@@ -14,6 +14,8 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:provider/provider.dart';
 import 'slachtoffer_video_model.dart';
 export 'slachtoffer_video_model.dart';
+import '/services/webrtc_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 /// Emergency Call Interface
 class SlachtofferVideoWidget extends StatefulWidget {
@@ -36,10 +38,13 @@ class _SlachtofferVideoWidgetState extends State<SlachtofferVideoWidget> {
   bool _isProcessingDispatchMessage = false;
   String? _selectedLanguage;
   bool _hasLocationPermission = true; // Default to true to avoid flicker
+  final WebRTCService _webrtcService = WebRTCService();
+  bool _isMuted = false;
 
   @override
   void initState() {
     super.initState();
+    _requestMicrophonePermission();
     _model = createModel(context, () => SlachtofferVideoModel());
 
     // Initialize text controller for chat input
@@ -100,6 +105,10 @@ class _SlachtofferVideoWidgetState extends State<SlachtofferVideoWidget> {
     } catch (e) {
       print('❌ Error during immediate location sync: $e');
     }
+  }
+
+  Future<void> _requestMicrophonePermission() async {
+    await Permission.microphone.request();
   }
 
   Future<void> _initializeGemini() async {
@@ -308,6 +317,9 @@ Always be compassionate and reassuring. Keep responses short and clear. NEVER fo
     // Resume notifications when leaving the page
     FlutterForegroundTask.sendDataToTask('chat_closed');
     FlutterForegroundTask.removeTaskDataCallback(_onReceiveTaskData);
+    if (FFAppState().Call.refrence != null) {
+      _webrtcService.hangUp(FFAppState().Call.refrence!);
+    }
     _model.dispose();
     super.dispose();
   }
@@ -432,6 +444,9 @@ Always be compassionate and reassuring. Keep responses short and clear. NEVER fo
                   print('❌ Error showing notification: $e');
                 }
               } // End of _isProcessingDispatchMessage check
+
+              print('📞 Starting WebRTC Call');
+              _webrtcService.startCall(FFAppState().Call.refrence!);
             }
 
             // Start tracking on both waiting and active states
@@ -513,28 +528,87 @@ Always be compassionate and reassuring. Keep responses short and clear. NEVER fo
                                     : Color(0xFFFF9800), // Orange for waiting
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Column(
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    slachtofferVideoConnectionRecord.status ==
-                                            Statuscall.active
-                                        ? "DISPATCHED ACCEPTED"
-                                        : "EHBO ASSISTANT",
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          slachtofferVideoConnectionRecord
+                                                      .status ==
+                                                  Statuscall.active
+                                              ? "DISPATCHED ACCEPTED"
+                                              : "EHBO ASSISTANT",
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        SizedBox(height: 4),
+                                        ValueListenableBuilder<String>(
+                                          valueListenable:
+                                              _webrtcService.connectionState,
+                                          builder: (context, connState, _) {
+                                            return ValueListenableBuilder<
+                                                String>(
+                                              valueListenable:
+                                                  _webrtcService.iceState,
+                                              builder: (context, iceState, _) {
+                                                return Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      slachtofferVideoConnectionRecord
+                                                                  .status ==
+                                                              Statuscall.active
+                                                          ? "Voice connected. Dispatcher is listening."
+                                                          : "You can chat with the dispatcher below.",
+                                                      style: TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 12),
+                                                    ),
+                                                    if (slachtofferVideoConnectionRecord
+                                                            .status ==
+                                                        Statuscall.active)
+                                                      Text(
+                                                        "DEBUG: Conn: $connState | ICE: $iceState",
+                                                        style: TextStyle(
+                                                            color: Colors
+                                                                .yellowAccent,
+                                                            fontSize: 10,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .bold),
+                                                      ),
+                                                  ],
+                                                );
+                                              },
+                                            );
+                                          },
+                                        )
+                                      ],
                                     ),
                                   ),
-                                  SizedBox(height: 4),
-                                  Text(
-                                    slachtofferVideoConnectionRecord.status ==
-                                            Statuscall.active
-                                        ? "A dispatcher is viewing your location."
-                                        : "You can chat with the dispatcher below.",
-                                    style: TextStyle(
-                                        color: Colors.white, fontSize: 12),
-                                  )
+                                  if (slachtofferVideoConnectionRecord.status ==
+                                      Statuscall.active)
+                                    IconButton(
+                                      icon: Icon(
+                                        _isMuted ? Icons.mic_off : Icons.mic,
+                                        color: Colors.white,
+                                      ),
+                                      onPressed: () {
+                                        _webrtcService.toggleMute();
+                                        setState(() {
+                                          _isMuted = !_isMuted;
+                                        });
+                                      },
+                                    ),
                                 ],
                               ),
                             ),
