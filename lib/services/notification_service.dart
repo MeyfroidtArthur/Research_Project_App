@@ -39,7 +39,7 @@ class NotificationService {
 
   // Lightweight init for background isolates
   static Future<void> initBackground() async {
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidInit = AndroidInitializationSettings('@mipmap/launcher_icon');
     final iosInit = const DarwinInitializationSettings(
       requestAlertPermission: false,
       requestSoundPermission: false,
@@ -56,7 +56,7 @@ class NotificationService {
     // You can set a specific timezone if needed:
     // tz.setLocalLocation(tz.getLocation('Europe/Brussels'));
 
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidInit = AndroidInitializationSettings('@mipmap/launcher_icon');
 
     final iosInit = const DarwinInitializationSettings(
       requestAlertPermission: false,
@@ -148,6 +148,7 @@ class NotificationService {
         priority: Priority.high, // heads-up
         category: AndroidNotificationCategory.message,
         visibility: NotificationVisibility.public, // show on lockscreen
+        icon: '@mipmap/launcher_icon',
       ),
       iOS: const DarwinNotificationDetails(
         presentAlert: true,
@@ -184,6 +185,7 @@ class NotificationService {
         importance: Importance.high,
         priority: Priority.high,
         visibility: NotificationVisibility.public,
+        icon: '@mipmap/launcher_icon',
       ),
       iOS: const DarwinNotificationDetails(
         presentAlert: true,
@@ -233,6 +235,7 @@ class NotificationService {
       playSound: true,
       showWhen: true,
       autoCancel: true,
+      icon: '@mipmap/launcher_icon',
     );
 
     final details = NotificationDetails(
@@ -280,6 +283,7 @@ class NotificationService {
       fullScreenIntent: true,
       enableVibration: true,
       playSound: true,
+      icon: '@mipmap/launcher_icon',
     );
 
     final details = NotificationDetails(

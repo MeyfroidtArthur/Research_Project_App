@@ -8,7 +8,8 @@ import '/services/background_location_service.dart';
 import '/services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
-
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:provider/provider.dart';
 import 'slachtoffer_video_model.dart';
 export 'slachtoffer_video_model.dart';
@@ -30,6 +31,8 @@ class _SlachtofferVideoWidgetState extends State<SlachtofferVideoWidget> {
   late BackgroundLocationService _locationService;
   late NotificationService _notificationService;
   Statuscall? _previousStatus;
+  ChatSession? _chatSession;
+  bool _hasInitializedAI = false;
 
   @override
   void initState() {
@@ -43,6 +46,9 @@ class _SlachtofferVideoWidgetState extends State<SlachtofferVideoWidget> {
     _locationService = BackgroundLocationService();
     _notificationService = NotificationService();
     _previousStatus = null;
+    
+    // Initialize Gemini AI for severity assessment
+    _initializeGemini();
 
     // Listen for messages from background service
     FlutterForegroundTask.addTaskDataCallback(_onReceiveTaskData);
@@ -50,6 +56,169 @@ class _SlachtofferVideoWidgetState extends State<SlachtofferVideoWidget> {
     // Start background service for chat notifications
     if (FFAppState().Call.refrence != null) {
       _locationService.startCallMode(FFAppState().Call.refrence!.path);
+    }
+  }
+
+  Future<void> _initializeGemini() async {
+    final apiKey = dotenv.env['GEMINI_API_KEY'];
+
+    if (apiKey != null && apiKey.isNotEmpty) {
+      final generativeModel = GenerativeModel(
+        model: 'gemini-2.5-flash-lite',
+        apiKey: apiKey,
+        systemInstruction: Content.system(
+          """You are an emergency triage assistant for the Red Cross. Your job is to help assess the severity of the situation while the user waits for dispatch.
+          
+IMPORTANT: In EVERY response, you must:
+1. Ask clarifying questions in a calm, supportive manner about symptoms like: bleeding, inability to walk, breathing difficulty, unconsciousness, chest pain, severe allergic reaction, poisoning
+2. If the user describes something that MIGHT be Level 3 (critical/life-threatening), ask MORE follow-up questions to confirm before assessing as Level 3
+3. Only assess as Level 3 after you have enough information to be confident it's truly life-threatening
+4. Continuously assess the severity based on all information provided
+5. ALWAYS include your current severity assessment at the END of your message in BOTH formats:
+   - Text format: [SEVERITY: X] where X is 1, 2, or 3
+   - Tag format: [[levelX]] where X is 1, 2, or 3
+
+Severity Levels:
+- Level 3 (CRITICAL): Life-threatening emergency (severe injury, poisoning, inability to breathe, unconsciousness, severe bleeding, etc.) = [[level3]]
+- Level 2 (URGENT): Important but person can wait (severe injuries that aren't immediately life-threatening, significant trauma, moderate bleeding) = [[level2]]
+- Level 1 (NON-EMERGENCY): Needs help but not urgent (minor injuries, first aid advice, support needed) = [[level1]]
+
+IMPORTANT RULE: If someone mentions something serious (like "can't breathe", "bleeding", "unconscious"), ask clarifying follow-up questions FIRST before assessing as Level 3. Only use Level 3 after you're confident based on multiple confirmations.
+
+EXAMPLE RESPONSE FORMAT:
+"Can you tell me if the person is breathing normally? Is there any severe bleeding? [SEVERITY: 2] [[level2]]"
+
+Always be compassionate and reassuring. Keep responses short and clear. NEVER forget to include BOTH the [SEVERITY: X] and [[levelX]] tags at the end of every message.""",
+        ),
+      );
+      _chatSession = generativeModel.startChat();
+      
+      // Send initial welcome message
+      try {
+        await ChatsRecord.createDoc(FFAppState().Call.refrence!)
+            .set(createChatsRecordData(
+          sender: 'Dispatch',
+          message: '👋 Hello! I\'m an AI triage assistant from the Red Cross. I\'m here to help assess your situation. Can you tell me what happened and what symptoms or injuries are involved? (e.g., bleeding, can\'t walk, breathing difficulty, chest pain, unconscious)',
+          timestamp: getCurrentTimestamp,
+        ));
+      } catch (e) {
+        print('Error sending initial message: $e');
+      }
+    } else {
+      print('Gemini API Key not found');
+    }
+  }
+
+  Future<void> _sendAIMessage(String userMessage) async {
+    if (_chatSession == null) return;
+
+    try {
+      // Save user message to database
+      await ChatsRecord.createDoc(FFAppState().Call.refrence!)
+          .set(createChatsRecordData(
+        sender: 'Slachtoffer',
+        message: userMessage,
+        timestamp: getCurrentTimestamp,
+      ));
+
+      // Get AI response
+      final response = await _chatSession!.sendMessage(Content.text(userMessage));
+      final aiResponse = response.text ?? "I couldn't process that. Can you tell me more?";
+
+      // Clean response for display (remove tags)
+      final cleanResponse = aiResponse
+          .replaceAll(RegExp(r'\[\[level\d\]\]', caseSensitive: false), '')
+          .replaceAll(RegExp(r'\[SEVERITY:\s*\d\]', caseSensitive: false), '')
+          .trim();
+
+      // Save AI message to database (without tags)
+      await ChatsRecord.createDoc(FFAppState().Call.refrence!)
+          .set(createChatsRecordData(
+        sender: 'Dispatch',
+        message: cleanResponse,
+        timestamp: getCurrentTimestamp,
+      ));
+
+      // Check if response contains severity level and update ermergencyLevel
+      int? detectedLevel;
+      final lowerResponse = aiResponse.toLowerCase();
+      
+      // Debug: print the response for testing
+      print('📊 AI Response for level detection: $aiResponse');
+      
+      // First, look for [[levelX]] tags
+      if (aiResponse.contains('[[level3]]') || aiResponse.contains('[[LEVEL3]]')) {
+        detectedLevel = 3;
+        print('✅ Detected severity level from [[level3]] tag');
+      } else if (aiResponse.contains('[[level2]]') || aiResponse.contains('[[LEVEL2]]')) {
+        detectedLevel = 2;
+        print('✅ Detected severity level from [[level2]] tag');
+      } else if (aiResponse.contains('[[level1]]') || aiResponse.contains('[[LEVEL1]]')) {
+        detectedLevel = 1;
+        print('✅ Detected severity level from [[level1]] tag');
+      } else {
+        // Fallback: look for [SEVERITY: X] pattern
+        final severityPattern = RegExp(r'\[SEVERITY:\s*(\d)\]', caseSensitive: false);
+        final severityMatch = severityPattern.firstMatch(aiResponse);
+        
+        if (severityMatch != null) {
+          final levelStr = severityMatch.group(1);
+          detectedLevel = int.tryParse(levelStr ?? '');
+          print('✅ Detected severity level from [SEVERITY: X] tag: $detectedLevel');
+        } else {
+          // Final fallback: check for keywords if tags not found
+          if (lowerResponse.contains('level 3') || 
+              lowerResponse.contains('critical') ||
+              lowerResponse.contains('life-threatening') ||
+              lowerResponse.contains('severe') ||
+              lowerResponse.contains('unconscious') ||
+              lowerResponse.contains('breathing') ||
+              lowerResponse.contains('poison')) {
+            detectedLevel = 3;
+          } 
+          else if (lowerResponse.contains('level 2') || 
+                   lowerResponse.contains('urgent') ||
+                   lowerResponse.contains('important') ||
+                   lowerResponse.contains('significant trauma')) {
+            detectedLevel = 2;
+          } 
+          else if (lowerResponse.contains('level 1') || 
+                   lowerResponse.contains('non-emergency') ||
+                   lowerResponse.contains('minor') ||
+                   lowerResponse.contains('first aid')) {
+            detectedLevel = 1;
+          }
+          if (detectedLevel != null) {
+            print('✅ Detected severity level from keywords: $detectedLevel');
+          }
+        }
+      }
+
+      // Update emergency level if detected
+      if (detectedLevel != null && FFAppState().Call.refrence != null) {
+        print('🚨 Emergency Level Detected: Level $detectedLevel');
+        try {
+          await FFAppState().Call.refrence!.update(createConnectionRecordData(
+            ermergencyLevel: detectedLevel,
+          ));
+          print('✅ Emergency Level Updated Successfully to: $detectedLevel');
+        } catch (updateError) {
+          print('❌ Error updating emergency level: $updateError');
+        }
+      } else {
+        print('⚠️ Could not detect level from response or missing reference');
+      }
+
+      // Clear text field
+      _model.textController?.clear();
+    } catch (e) {
+      print('Error in AI conversation: $e');
+      await ChatsRecord.createDoc(FFAppState().Call.refrence!)
+          .set(createChatsRecordData(
+        sender: 'Dispatch',
+        message: 'I encountered an error. Please describe your situation.',
+        timestamp: getCurrentTimestamp,
+      ));
     }
   }
 
@@ -154,6 +323,19 @@ class _SlachtofferVideoWidgetState extends State<SlachtofferVideoWidget> {
             if (oldStatus == Statuscall.waiting &&
                 slachtofferVideoConnectionRecord.status == Statuscall.active) {
               print('📢 Showing call accepted notification');
+              
+              // Send dispatch takeover message
+              try {
+                await ChatsRecord.createDoc(FFAppState().Call.refrence!)
+                    .set(createChatsRecordData(
+                  sender: 'System',
+                  message: '✅ Dispatch is here! You are now connected.',
+                  timestamp: getCurrentTimestamp,
+                ));
+              } catch (e) {
+                print('Error sending dispatch takeover message: $e');
+              }
+              
               try {
                 await NotificationService.showNow(
                   id: 1001,
@@ -383,14 +565,32 @@ class _SlachtofferVideoWidgetState extends State<SlachtofferVideoWidget> {
                                       print(_model.textController?.text);
                                       return;
                                     }
-                                    await ChatsRecord.createDoc(
-                                            FFAppState().Call.refrence!)
-                                        .set(createChatsRecordData(
-                                      sender: 'Slachtoffer',
-                                      message: _model.textController!.text,
-                                      timestamp: getCurrentTimestamp,
-                                    ));
-                                    _model.textController?.clear();
+
+                                    final messageText =
+                                        _model.textController!.text;
+
+                                    // Check if we're still waiting for dispatch
+                                    if (FFAppState().Call.status ==
+                                        Statuscall.waiting) {
+                                      // Initialize AI on first message if not done
+                                      if (!_hasInitializedAI) {
+                                        _initializeGemini();
+                                        _hasInitializedAI = true;
+                                      }
+                                      // Route to AI triage assistant
+                                      await _sendAIMessage(messageText);
+                                    } else {
+                                      // Send regular message to dispatch
+                                      await ChatsRecord.createDoc(
+                                              FFAppState().Call.refrence!)
+                                          .set(createChatsRecordData(
+                                        sender: 'Slachtoffer',
+                                        message: messageText,
+                                        timestamp: getCurrentTimestamp,
+                                      ));
+                                      _model.textController?.clear();
+                                    }
+
                                     safeSetState(() {});
                                   },
                                 ),
