@@ -160,6 +160,25 @@ class _SlachtofferChatWidgetState extends State<SlachtofferChatWidget> {
                                       final listViewChatsRecord =
                                           listViewChatsRecordList[
                                               listViewIndex];
+                                      final isMe = listViewChatsRecord.sender ==
+                                          'Slachtoffer';
+                                      final String senderName = isMe
+                                          ? ((FFAppState().User.voornaam +
+                                                      ' ' +
+                                                      FFAppState()
+                                                          .User
+                                                          .achternaam)
+                                                  .trim()
+                                                  .isEmpty
+                                              ? 'ANONYMOUS'
+                                              : (FFAppState().User.voornaam +
+                                                      ' ' +
+                                                      FFAppState()
+                                                          .User
+                                                          .achternaam)
+                                                  .trim())
+                                          : 'DISPATCH';
+
                                       return Container(
                                         width:
                                             MediaQuery.sizeOf(context).width *
@@ -170,85 +189,107 @@ class _SlachtofferChatWidgetState extends State<SlachtofferChatWidget> {
                                         ),
                                         alignment: AlignmentDirectional(
                                             valueOrDefault<double>(
-                                              listViewChatsRecord.sender ==
-                                                      'Slachtoffer'
-                                                  ? 1.0
-                                                  : -1.0,
+                                              isMe ? 1.0 : -1.0,
                                               0.0,
                                             ),
                                             0.0),
-                                        child: Row(
+                                        child: Column(
                                           mainAxisSize: MainAxisSize.min,
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.start,
+                                          crossAxisAlignment: isMe
+                                              ? CrossAxisAlignment.end
+                                              : CrossAxisAlignment.start,
                                           children: [
-                                            Align(
-                                              alignment: AlignmentDirectional(
-                                                  0.0, 0.0),
-                                              child: Container(
-                                                decoration: BoxDecoration(
-                                                  color: listViewChatsRecord
-                                                              .sender ==
-                                                          'Slachtoffer'
-                                                      ? FlutterFlowTheme.of(
-                                                              context)
-                                                          .primary
-                                                      : FlutterFlowTheme.of(
-                                                              context)
-                                                          .textWhite,
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                          16.0),
-                                                  border: Border.all(
-                                                    color: listViewChatsRecord
-                                                                .sender ==
-                                                            'Slachtoffer'
-                                                        ? Color(0x00000000)
-                                                        : FlutterFlowTheme.of(
-                                                                context)
-                                                            .primary,
-                                                  ),
-                                                ),
-                                                alignment: AlignmentDirectional(
-                                                    0.0, 0.0),
-                                                child: Padding(
-                                                  padding: EdgeInsets.all(8.0),
-                                                  child: Text(
-                                                    listViewChatsRecord.message,
-                                                    style: FlutterFlowTheme.of(
-                                                            context)
-                                                        .bodyMedium
-                                                        .override(
-                                                          font:
-                                                              GoogleFonts.inter(
-                                                            fontWeight:
-                                                                FontWeight.bold,
-                                                            fontStyle:
-                                                                FlutterFlowTheme.of(
+                                            Padding(
+                                              padding: EdgeInsetsDirectional
+                                                  .fromSTEB(0.0, 0.0, 0.0, 4.0),
+                                              child: Text(
+                                                senderName,
+                                                style: FlutterFlowTheme.of(
+                                                        context)
+                                                    .bodySmall
+                                                    .override(
+                                                      font: GoogleFonts.inter(),
+                                                      color: Color(0xFF5E5E5E),
+                                                      fontSize: 10.0,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                              ),
+                                            ),
+                                            Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.start,
+                                              children: [
+                                                Align(
+                                                  alignment:
+                                                      AlignmentDirectional(
+                                                          0.0, 0.0),
+                                                  child: Container(
+                                                    decoration: BoxDecoration(
+                                                      color: isMe
+                                                          ? FlutterFlowTheme.of(
+                                                                  context)
+                                                              .primary
+                                                          : FlutterFlowTheme.of(
+                                                                  context)
+                                                              .textWhite,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              16.0),
+                                                      border: Border.all(
+                                                        color: isMe
+                                                            ? Color(0x00000000)
+                                                            : FlutterFlowTheme
+                                                                    .of(context)
+                                                                .primary,
+                                                      ),
+                                                    ),
+                                                    alignment:
+                                                        AlignmentDirectional(
+                                                            0.0, 0.0),
+                                                    child: Padding(
+                                                      padding:
+                                                          EdgeInsets.all(8.0),
+                                                      child: Text(
+                                                        listViewChatsRecord
+                                                            .message,
+                                                        style: FlutterFlowTheme
+                                                                .of(context)
+                                                            .bodyMedium
+                                                            .override(
+                                                              font: GoogleFonts
+                                                                  .inter(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                fontStyle: FlutterFlowTheme.of(
                                                                         context)
                                                                     .bodyMedium
                                                                     .fontStyle,
-                                                          ),
-                                                          color: listViewChatsRecord
-                                                                      .sender ==
-                                                                  'Slachtoffer'
-                                                              ? Colors.white
-                                                              : FlutterFlowTheme
-                                                                      .of(context)
-                                                                  .primary,
-                                                          fontSize: 12.0,
-                                                          letterSpacing: 0.0,
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          fontStyle:
-                                                              FlutterFlowTheme.of(
-                                                                      context)
-                                                                  .bodyMedium
-                                                                  .fontStyle,
-                                                        ),
+                                                              ),
+                                                              color: isMe
+                                                                  ? Colors.white
+                                                                  : FlutterFlowTheme.of(
+                                                                          context)
+                                                                      .primary,
+                                                              fontSize: 12.0,
+                                                              letterSpacing:
+                                                                  0.0,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                              fontStyle:
+                                                                  FlutterFlowTheme.of(
+                                                                          context)
+                                                                      .bodyMedium
+                                                                      .fontStyle,
+                                                            ),
+                                                      ),
+                                                    ),
                                                   ),
                                                 ),
-                                              ),
+                                              ],
                                             ),
                                           ],
                                         ),

@@ -159,6 +159,7 @@ void startCallback() {
 /// ------------------------------------------------------------
 class LocationTaskHandler extends TaskHandler {
   StreamSubscription<Position>? _positionSubscription;
+  StreamSubscription<DocumentSnapshot>? _teamSubscription;
   StreamSubscription<DocumentSnapshot>? _statusSubscription;
   StreamSubscription<QuerySnapshot>? _interventionSubscription;
   StreamSubscription<QuerySnapshot>? _messageSubscription;
@@ -187,12 +188,13 @@ class LocationTaskHandler extends TaskHandler {
     final teamPath = await FlutterForegroundTask.getData<String>(
       key: 'teamPath',
     );
+
     final callPath = await FlutterForegroundTask.getData<String>(
       key: 'callPath',
     );
 
     if (teamPath != null) {
-      _setupStatusListener(teamPath);
+      _setupTeamListener(teamPath);
       _setupInterventionListener(teamPath);
       _setupMessageListener(teamPath);
 
@@ -206,7 +208,7 @@ class LocationTaskHandler extends TaskHandler {
       });
     } else if (callPath != null) {
       print('✅ onStart: Starting Call Mode logic for path: $callPath');
-      _setupStatusListener(callPath);
+      _setupStatusListener(callPath); // Still needed for call mode
       _setupChatListener(callPath);
 
       // Start location tracking for SLACHTOFFER in call mode
@@ -219,6 +221,35 @@ class LocationTaskHandler extends TaskHandler {
         await _updateCallLocation(position, callPath);
       });
     }
+  }
+
+  void _setupTeamListener(String teamPath) {
+    print('📡 Setting up Team Listener for path: $teamPath');
+
+    _teamSubscription = FirebaseFirestore.instance
+        .doc(teamPath)
+        .snapshots()
+        .listen((snapshot) async {
+      if (!snapshot.exists) {
+        print('⚠️ Team document MISSING at $teamPath');
+        return;
+      }
+
+      final data = snapshot.data();
+      if (data == null) {
+        print('⚠️ Team data is NULL');
+        return;
+      }
+
+      // 1. Handle Status Change (Dispatch accepted call)
+      final status = data['status'] as String? ?? data['Status'] as String?;
+      if (_lastKnownStatus != null &&
+          _lastKnownStatus != 'active' &&
+          (status == 'active' || status == 'Active')) {
+        _showCallAcceptedNotification();
+      }
+      _lastKnownStatus = status;
+    });
   }
 
   void _setupChatListener(String callPath) {
@@ -441,6 +472,7 @@ class LocationTaskHandler extends TaskHandler {
   @override
   Future<void> onDestroy(DateTime timestamp) async {
     await _positionSubscription?.cancel();
+    await _teamSubscription?.cancel();
     await _statusSubscription?.cancel();
     await _interventionSubscription?.cancel();
     await _messageSubscription?.cancel();

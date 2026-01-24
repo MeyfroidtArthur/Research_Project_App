@@ -35,6 +35,7 @@ class _SlachtofferAIAssistantWidgetState
   late SlachtofferAIAssistantModel _model;
 
   ChatSession? _chatSession;
+  String? _selectedLanguage;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -56,7 +57,8 @@ class _SlachtofferAIAssistantWidgetState
     // Add initial greeting
     _model.chatHistory.add({
       'sender': 'ai',
-      'message': 'Hello! I am your AI Assistant. How can I help you today?'
+      'message':
+          '👋 Welkom! Kies uw taal / Choisissez votre langue / Welcome! Choose your language:\n1. Nederlands 🇳🇱\n2. Français 🇫🇷\n3. English 🇬🇧'
     });
   }
 
@@ -76,22 +78,31 @@ class _SlachtofferAIAssistantWidgetState
         You are a dedicated Red Cross First Aid (EHBO) Assistant.
         
         STRICT RULES:
-        1. CRITICAL EMERGENCY: If the user describes a life-threatening situation (e.g., severe bleeding, unconsciousness, not breathing, heart attack), you MUST immediately output exactly 
-           [[EMERGENCY_ACTION]] but if you are not sure ask some questions to get more information.
+        1. CRITICAL EMERGENCY: If you identify a life-threatening situation (e.g., severe bleeding, unconsciousness, not breathing, heart attack) OR if you feel faint, feel like falling, or feel like losing consciousness (EVEN IF you can walk), you MUST immediately output exactly 
+           [[EMERGENCY_ACTION]] but if you are not sure ask questions to get more information.
            and then give short advice on what to do while help is on the way.
         
-        2. NO MEDICINE: You are NOT a doctor. If the user asks for medicine, painkillers, or prescriptions, you must answer "We as red cross cant give any medication, please contact a doctor or go to the nearest hospital."
+        2. NO MEDICINE: You are NOT a doctor. If you are asked for medicine, painkillers, or prescriptions, you must answer "We as red cross cant give any medication, please contact a doctor or go to the nearest hospital."
         
         3. SCOPE: Answer only First Aid (EHBO) questions. If the topic is not about safety or medical aid, politely refuse.
         
-        4. TONE: Be calm, concise, and give instructions in steps.
+        4. TONE: Be calm, concise, and give instructions in steps. ALWAYS address the user directly as 'you' in their language. NEVER refer to 'the person' or 'the patient' unless they explicitly mention helping someone else.
 
         5. LANGUAGE: Automatically detect the language of the user's message (English, Dutch, or French). You MUST reply in that same language.
 
-        6. LOCATION: If the user asks for where ehbo post or personel is you MUST output exactly: 
+        6. LOCATION: If you are asked for where ehbo post or personel is you MUST output exactly: 
            [[NAVIGATE_MAP]]
         
-        7. IF NOT SURE: ask for more information by giving them options to choose from and number them"""),
+        7. IF NOT SURE: ask for more information by giving them these numbered options: 1. Bleeding (Bloeden), 2. Breathing (Ademhaling), 3. Walking (Lopen), 4. Intoxication (Intoxicatie), 5. Allergy (Allergie), 6. Pain (Pijn), 7. Other (Andere)
+        
+        8. After addressing the immediate symptoms, ask about YOUR history: 'Have you experienced this before?', 'Do you have any existing health issues?', or 'Are you taking any medication?'. 
+           - IMPORTANT: DO NOT give any medication advice. If medication is mentioned, explicitly state: 'I cannot provide advice on medication.'
+           - This information is for help assessment only and will not be saved permanently.
+
+        9. STRICT PRIVACY: You MUST NOT save, record, or remember any personal or medical information beyond the current triage assessment. Explicitly inform the user if they ask: "Your medical information is only used for this immediate assessment by the dispatcher and will not be stored in your permanent profile."
+
+        10. UNLIMITED SUPPORT: The user can ask as many questions as they need. Provide the most thorough, accurate, and helpful First Aid advice possible for every query.
+"""),
       );
       _chatSession = generativeModel.startChat();
     } else {
@@ -182,9 +193,49 @@ class _SlachtofferAIAssistantWidgetState
 
     if (_chatSession != null) {
       try {
-        final response =
-            await _chatSession!.sendMessage(Content.text(userMessage));
-        aiResponse = response.text ?? "I'm sorry, I couldn't understand that.";
+        final text = userMessage.toLowerCase().trim();
+        String? newLanguage;
+
+        // Check for language change request
+        bool isLanguageRequest = text.contains('verander naar') ||
+            text.contains('switch to') ||
+            text.contains('change to') ||
+            text.contains('change naar');
+
+        if (_selectedLanguage == null || isLanguageRequest) {
+          if (text == '1' ||
+              text.contains('nederlands') ||
+              text.contains('dutch')) {
+            newLanguage = 'Dutch';
+          } else if (text == '2' ||
+              text.contains('français') ||
+              text.contains('french') ||
+              text.contains('francais')) {
+            newLanguage = 'French';
+          } else if (text == '3' || text.contains('english')) {
+            newLanguage = 'English';
+          }
+        }
+
+        if (newLanguage != null && newLanguage != _selectedLanguage) {
+          _selectedLanguage = newLanguage;
+          // Prompt AI to acknowledge change in the new language
+          final response = await _chatSession!.sendMessage(Content.text(
+              "I have switched the language to $_selectedLanguage. Please introduce yourself as EHBO triage assistant in $_selectedLanguage, address me directly as 'you', and ask me what the problem is by providing these numbered options: 1. Bleeding, 2. Breathing, 3. Walking, 4. Intoxication, 5. Allergy, 6. Pain, 7. Other. (Note: use 'Intoxicatie' as the Dutch term for Intoxication)"));
+          aiResponse = response.text ??
+              "Language switched to $_selectedLanguage. How can I help?";
+        } else {
+          // Standard message with language context if selected
+          String prompt = userMessage;
+          if (_selectedLanguage != null) {
+            prompt =
+                "User said: '$userMessage'. Please respond in $_selectedLanguage.";
+          }
+          final response =
+              await _chatSession!.sendMessage(Content.text(prompt));
+          aiResponse =
+              response.text ?? "I'm sorry, I couldn't understand that.";
+        }
 
         if (aiResponse.contains('[[EMERGENCY_ACTION]]')) {
           setState(() {
@@ -530,7 +581,7 @@ class _SlachtofferAIAssistantWidgetState
                             },
                           ),
                           Text(
-                            'AI Assistant',
+                            'EHBO Assistant',
                             style: FlutterFlowTheme.of(context)
                                 .titleLarge
                                 .override(
@@ -577,42 +628,61 @@ class _SlachtofferAIAssistantWidgetState
                               itemBuilder: (context, index) {
                                 final chatItem = _model.chatHistory[index];
                                 final isUser = chatItem['sender'] == 'user';
+                                final String senderName = isUser
+                                    ? ((FFAppState().User.voornaam +
+                                                ' ' +
+                                                FFAppState().User.achternaam)
+                                            .trim()
+                                            .isEmpty
+                                        ? 'ANONYMOUS'
+                                        : (FFAppState().User.voornaam +
+                                                ' ' +
+                                                FFAppState().User.achternaam)
+                                            .trim())
+                                    : 'EHBO Assistant';
+
                                 return Align(
                                   alignment: isUser
                                       ? AlignmentDirectional.centerEnd
                                       : AlignmentDirectional.centerStart,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: isUser
-                                          ? FlutterFlowTheme.of(context).primary
-                                          : FlutterFlowTheme.of(context)
-                                              .secondaryBackground,
-                                      borderRadius: BorderRadius.circular(16.0),
-                                      border: Border.all(
-                                        color: isUser
-                                            ? Colors.transparent
-                                            : FlutterFlowTheme.of(context)
-                                                .primary,
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: isUser
+                                        ? CrossAxisAlignment.end
+                                        : CrossAxisAlignment.start,
+                                    children: [
+                                      Padding(
+                                        padding:
+                                            const EdgeInsets.only(bottom: 4.0),
+                                        child: Text(
+                                          senderName,
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                    child: Padding(
-                                      padding: EdgeInsets.all(12.0),
-                                      child: Text(
-                                        chatItem['message'] ?? '',
-                                        style: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .override(
-                                              font: GoogleFonts.inter(
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                              color: isUser
-                                                  ? Colors.white
-                                                  : FlutterFlowTheme.of(context)
-                                                      .primary,
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                      Container(
+                                        padding: EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: isUser
+                                              ? FlutterFlowTheme.of(context)
+                                                  .primary
+                                              : Colors.grey[200],
+                                          borderRadius:
+                                              BorderRadius.circular(12.0),
+                                        ),
+                                        child: Text(
+                                          chatItem['message'] ?? '',
+                                          style: TextStyle(
+                                            color: isUser
+                                                ? Colors.white
+                                                : Colors.black,
+                                          ),
+                                        ),
                                       ),
-                                    ),
+                                    ],
                                   ),
                                 );
                               },
@@ -630,7 +700,7 @@ class _SlachtofferAIAssistantWidgetState
                           child: Align(
                             alignment: Alignment.centerLeft,
                             child: Text(
-                              'AI is typing...',
+                              'EHBO Assistant is typing...',
                               style: FlutterFlowTheme.of(context)
                                   .bodySmall
                                   .override(
@@ -640,68 +710,65 @@ class _SlachtofferAIAssistantWidgetState
                             ),
                           ),
                         ),
-                      Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color:
-                              FlutterFlowTheme.of(context).secondaryBackground,
-                          borderRadius: BorderRadius.circular(100.0),
-                          border: Border.all(
-                            color: Color(0xFFC6C6C6),
+                      Row(
+                        mainAxisSize: MainAxisSize.max,
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _model.textController,
+                              focusNode: _model.textFieldFocusNode,
+                              autofocus: false,
+                              decoration: InputDecoration(
+                                hintText: 'Type a message...',
+                                hintStyle: TextStyle(color: Colors.grey),
+                                filled: true,
+                                fillColor: Colors.grey[100],
+                                enabledBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(
+                                    color: Colors.grey[300]!,
+                                    width: 1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(24.0),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(
+                                    color: FlutterFlowTheme.of(context).primary,
+                                    width: 2,
+                                  ),
+                                  borderRadius: BorderRadius.circular(24.0),
+                                ),
+                                errorBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(
+                                    color: FlutterFlowTheme.of(context).error,
+                                    width: 1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(24.0),
+                                ),
+                                focusedErrorBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(
+                                    color: FlutterFlowTheme.of(context).error,
+                                    width: 2,
+                                  ),
+                                  borderRadius: BorderRadius.circular(24.0),
+                                ),
+                                contentPadding: EdgeInsetsDirectional.fromSTEB(
+                                    16.0, 12.0, 16.0, 12.0),
+                              ),
+                              style: TextStyle(color: Colors.black),
+                              cursorColor: Colors.black,
+                              onFieldSubmitted: (_) => _handleSend(),
+                            ),
                           ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.max,
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: _model.textController,
-                                focusNode: _model.textFieldFocusNode,
-                                autofocus: false,
-                                decoration: InputDecoration(
-                                  hintText: 'Type your question...',
-                                  hintStyle: FlutterFlowTheme.of(context)
-                                      .bodyMedium
-                                      .override(
-                                        font: GoogleFonts.inter(),
-                                        color: Color(0xFF343330),
-                                        fontSize: 12.0,
-                                      ),
-                                  enabledBorder: InputBorder.none,
-                                  focusedBorder: InputBorder.none,
-                                  errorBorder: InputBorder.none,
-                                  focusedErrorBorder: InputBorder.none,
-                                  contentPadding:
-                                      EdgeInsetsDirectional.fromSTEB(
-                                          16.0, 12.0, 16.0, 12.0),
-                                ),
-                                style: FlutterFlowTheme.of(context)
-                                    .bodyMedium
-                                    .override(
-                                      font: GoogleFonts.inter(),
-                                      color: Color(0xFF343330),
-                                      fontSize: 12.0,
-                                    ),
-                                cursorColor: Color(0xFF343330),
-                                onFieldSubmitted: (_) => _handleSend(),
-                              ),
+                          SizedBox(width: 8),
+                          IconButton(
+                            onPressed: _handleSend,
+                            icon: Icon(
+                              Icons.send,
+                              color: FlutterFlowTheme.of(context).primary,
+                              size: 24.0,
                             ),
-                            Padding(
-                              padding: EdgeInsetsDirectional.fromSTEB(
-                                  0.0, 0.0, 16.0, 0.0),
-                              child: InkWell(
-                                onTap: _handleSend,
-                                child: Icon(
-                                  Icons
-                                      .send, // Using standard icon if FFIcons not found easily
-                                  color:
-                                      FlutterFlowTheme.of(context).primaryText,
-                                  size: 24.0,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

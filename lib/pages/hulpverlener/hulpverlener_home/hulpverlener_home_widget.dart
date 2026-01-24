@@ -104,7 +104,6 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
   @override
   void dispose() {
     _model.dispose();
-
     super.dispose();
   }
 
