@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'dart:math';
 
 class MapUtils {
   static IconConfig getIconConfig(String? iconType) {
@@ -52,6 +53,22 @@ class MapUtils {
         size: size * 0.6,
       ),
     );
+  }
+
+  static double calculateBearing(
+      double startLat, double startLng, double endLat, double endLng) {
+    double startLatRad = startLat * (pi / 180.0);
+    double startLngRad = startLng * (pi / 180.0);
+    double endLatRad = endLat * (pi / 180.0);
+    double endLngRad = endLng * (pi / 180.0);
+
+    double dLng = endLngRad - startLngRad;
+
+    double y = sin(dLng) * cos(endLatRad);
+    double x = cos(startLatRad) * sin(endLatRad) -
+        sin(startLatRad) * cos(endLatRad) * cos(dLng);
+
+    return atan2(y, x);
   }
 }
 

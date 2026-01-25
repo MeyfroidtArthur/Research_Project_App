@@ -54,6 +54,7 @@ class _SlachtofferMapWidgetState extends State<SlachtofferMapWidget> {
   String? _mapboxError;
 
   List<latlong.LatLng>? _routePoints;
+  latlong.LatLng? _destinationLocation;
   String? _routeTargetName;
   String? _routeEtaText;
   bool _isFetchingRoute = false;
@@ -228,14 +229,15 @@ class _SlachtofferMapWidgetState extends State<SlachtofferMapWidget> {
       return;
     }
 
+    final destination = latlong.LatLng(lat, lng);
+
     setState(() {
       _isFetchingRoute = true;
       _routeTargetName = name;
       _routePoints = null;
+      _destinationLocation = destination;
       _routeEtaText = null;
     });
-
-    final destination = latlong.LatLng(lat, lng);
 
     final result = await _fetchRoute(userLoc, destination);
 
@@ -312,6 +314,7 @@ class _SlachtofferMapWidgetState extends State<SlachtofferMapWidget> {
   void _clearRoute() {
     setState(() {
       _routePoints = null;
+      _destinationLocation = null;
       _routeTargetName = null;
       _routeEtaText = null;
       _isFetchingRoute = false;
@@ -679,6 +682,8 @@ class _SlachtofferMapWidgetState extends State<SlachtofferMapWidget> {
                                                     ),
                                                     Expanded(
                                                       child: ListView.separated(
+                                                        controller:
+                                                            scrollController,
                                                         padding:
                                                             EdgeInsets.zero,
                                                         itemCount:
@@ -824,6 +829,16 @@ class _SlachtofferMapWidgetState extends State<SlachtofferMapWidget> {
                     isCalculating: _isFetchingRoute,
                     etaText: _routeEtaText,
                     onClose: _clearRoute,
+                    currentHeading: currentHeading,
+                    bearing: (currentUserLocation != null &&
+                            _destinationLocation != null)
+                        ? MapUtils.calculateBearing(
+                            currentUserLocation!.latitude,
+                            currentUserLocation!.longitude,
+                            _destinationLocation!.latitude,
+                            _destinationLocation!.longitude,
+                          )
+                        : null,
                   ),
                 ),
             ],

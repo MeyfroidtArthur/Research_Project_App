@@ -93,15 +93,7 @@ class _SlachtofferAIAssistantWidgetState
         6. LOCATION: If you are asked for where ehbo post or personel is you MUST output exactly: 
            [[NAVIGATE_MAP]]
         
-        7. IF NOT SURE: ask for more information by giving them these numbered options: 1. Bleeding (Bloeden), 2. Breathing (Ademhaling), 3. Walking (Lopen), 4. Intoxication (Intoxicatie), 5. Allergy (Allergie), 6. Pain (Pijn), 7. Other (Andere)
-        
-        8. After addressing the immediate symptoms, ask about YOUR history: 'Have you experienced this before?', 'Do you have any existing health issues?', or 'Are you taking any medication?'. 
-           - IMPORTANT: DO NOT give any medication advice. If medication is mentioned, explicitly state: 'I cannot provide advice on medication.'
-           - This information is for help assessment only and will not be saved permanently.
-
-        9. STRICT PRIVACY: You MUST NOT save, record, or remember any personal or medical information beyond the current triage assessment. Explicitly inform the user if they ask: "Your medical information is only used for this immediate assessment by the dispatcher and will not be stored in your permanent profile."
-
-        10. UNLIMITED SUPPORT: The user can ask as many questions as they need. Provide the most thorough, accurate, and helpful First Aid advice possible for every query.
+        7. UNLIMITED SUPPORT: The user can ask as many questions as they need. Provide the most thorough, accurate, and helpful First Aid advice possible for every query.
 """),
       );
       _chatSession = generativeModel.startChat();
@@ -221,7 +213,7 @@ class _SlachtofferAIAssistantWidgetState
           _selectedLanguage = newLanguage;
           // Prompt AI to acknowledge change in the new language
           final response = await _chatSession!.sendMessage(Content.text(
-              "I have switched the language to $_selectedLanguage. Please introduce yourself as EHBO triage assistant in $_selectedLanguage, address me directly as 'you', and ask me what the problem is by providing these numbered options: 1. Bleeding, 2. Breathing, 3. Walking, 4. Intoxication, 5. Allergy, 6. Pain, 7. Other. (Note: use 'Intoxicatie' as the Dutch term for Intoxication)"));
+              "I have switched the language to $_selectedLanguage. Please introduce yourself as EHBO assistant in $_selectedLanguage and ask me 'How can I help you?' in that language."));
           aiResponse = response.text ??
               "Language switched to $_selectedLanguage. How can I help?";
         } else {

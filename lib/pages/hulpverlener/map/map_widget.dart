@@ -53,6 +53,7 @@ class _MapWidgetState extends State<MapWidget> {
   String? _mapboxError;
 
   List<latlong.LatLng>? _routePoints;
+  latlong.LatLng? _destinationLocation;
   String? _routeTargetName;
   String? _routeEtaText;
   bool _isFetchingRoute = false;
@@ -173,11 +174,7 @@ class _MapWidgetState extends State<MapWidget> {
   }
 
   Future<void> _startNavigation(MapPinsRecord record) async {
-    print('🧭 Starting navigation to: ${record.name}');
-    if (!record.hasLocation()) {
-      print('❌ Record has no location');
-      return;
-    }
+    if (!record.hasLocation()) return;
 
     final userLoc = currentUserLocation;
     if (userLoc == null) {
@@ -190,19 +187,18 @@ class _MapWidgetState extends State<MapWidget> {
       return;
     }
 
-    print('📍 User location: ${userLoc.latitude}, ${userLoc.longitude}');
+    final destination = latlong.LatLng(
+      record.location!.latitude,
+      record.location!.longitude,
+    );
 
     setState(() {
       _isFetchingRoute = true;
       _routeTargetName = record.name;
       _routePoints = null;
+      _destinationLocation = destination;
       _routeEtaText = null;
     });
-
-    final destination = latlong.LatLng(
-      record.location!.latitude,
-      record.location!.longitude,
-    );
 
     // Fetch route in background
     _fetchRoute(userLoc, destination).then((result) {
@@ -306,6 +302,7 @@ class _MapWidgetState extends State<MapWidget> {
   void _clearRoute() {
     setState(() {
       _routePoints = null;
+      _destinationLocation = null;
       _routeTargetName = null;
       _routeEtaText = null;
       _isFetchingRoute = false;
@@ -372,6 +369,7 @@ class _MapWidgetState extends State<MapWidget> {
       _isFetchingRoute = true;
       _routeTargetName = name;
       _routePoints = null;
+      _destinationLocation = destination;
       _routeEtaText = null;
     });
 
@@ -443,9 +441,14 @@ class _MapWidgetState extends State<MapWidget> {
                 hoverColor: Colors.transparent,
                 highlightColor: Colors.transparent,
                 onTap: () async {
-                  // Stop location tracking before logout
-                  final locationService = BackgroundLocationService();
-                  await locationService.stopTracking();
+                   // Update team status and stop location tracking before logout
+                   if (FFAppState().TeamId != null) {
+                     await FFAppState().TeamId!.update(createTeamsRecordData(
+                       status: TeamStatus.Unavailable,
+                     ));
+                   }
+                   final locationService = BackgroundLocationService();
+                   await locationService.stopTracking();
 
                   context.pushNamed(
                     SignUpWidget.routeName,
@@ -1047,6 +1050,16 @@ class _MapWidgetState extends State<MapWidget> {
                     isCalculating: _isFetchingRoute,
                     etaText: _routeEtaText,
                     onClose: _clearRoute,
+                    currentHeading: currentHeading,
+                    bearing: (currentUserLocation != null &&
+                            _destinationLocation != null)
+                        ? MapUtils.calculateBearing(
+                            currentUserLocation!.latitude,
+                            currentUserLocation!.longitude,
+                            _destinationLocation!.latitude,
+                            _destinationLocation!.longitude,
+                          )
+                        : null,
                   ),
                 ),
             ],

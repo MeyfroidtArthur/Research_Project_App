@@ -293,11 +293,11 @@ class _SignUpWidgetState extends State<SignUpWidget> {
                                   FFAppState().Event = EventStruct(
                                     naam: _model.eventListVrijwilligerQR?.naam,
                                     locatie:
-                                        _model.loginAgainSlachtoffer?.locatie,
-                                    code: _model.codeTextController.text,
+                                        _model.eventListVrijwilligerQR?.locatie,
+                                    code: _model.qrCodeData,
                                     start: _model
                                         .eventListVrijwilligerQR?.startTime,
-                                    end: _model.eventListVrijwilliger?.endTime,
+                                    end: _model.eventListVrijwilligerQR?.endTime,
                                     id: _model
                                         .eventListVrijwilligerQR?.reference,
                                   );
@@ -320,13 +320,13 @@ class _SignUpWidgetState extends State<SignUpWidget> {
                                       naam: _model.eventListSlachtofferQR?.naam,
                                       locatie: _model
                                           .eventListSlachtofferQR?.locatie,
-                                      code: _model.codeTextController.text,
+                                      code: _model.qrCodeData,
                                       start: _model
                                           .eventListSlachtofferQR?.startTime,
                                       end: _model
                                           .eventListSlachtofferQR?.endTime,
                                       id: _model
-                                          .loginAgainSlachtoffer?.reference,
+                                          .eventListSlachtofferQR?.reference,
                                     );
                                     safeSetState(() {});
 
@@ -344,6 +344,12 @@ class _SignUpWidgetState extends State<SignUpWidget> {
                                     await showDialog(
                                       context: context,
                                       builder: (dialogContext) {
+                                        Future.delayed(Duration(seconds: 1), () {
+                                          if (Navigator.of(dialogContext)
+                                              .canPop()) {
+                                            Navigator.pop(dialogContext);
+                                          }
+                                        });
                                         return Dialog(
                                           elevation: 0,
                                           insetPadding: EdgeInsets.zero,
@@ -487,6 +493,12 @@ class _SignUpWidgetState extends State<SignUpWidget> {
                                     await showDialog(
                                       context: context,
                                       builder: (dialogContext) {
+                                        Future.delayed(Duration(seconds: 1), () {
+                                          if (Navigator.of(dialogContext)
+                                              .canPop()) {
+                                            Navigator.pop(dialogContext);
+                                          }
+                                        });
                                         return Dialog(
                                           elevation: 0,
                                           insetPadding: EdgeInsets.zero,

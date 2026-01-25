@@ -132,6 +132,7 @@ IMPORTANT: In EVERY response, you must:
 7. ALWAYS include your current severity assessment at the END of your message in BOTH formats:
    - Text format: [SEVERITY: X] where X is 1, 2, or 3
    - Tag format: [[levelX]] where X is 1, 2, or 3
+8. Dont asks questions taht you have already asked
 
 
 Severity Levels:
@@ -410,19 +411,14 @@ Always be compassionate and reassuring. Keep responses short and clear. NEVER fo
 
                 // Send dispatch takeover message
                 try {
-                  // Check if message already exists to prevent duplicates
-                  final existingMessages = await FFAppState()
-                      .Call
-                      .refrence!
-                      .collection('chats')
-                      .where('message',
-                          isEqualTo:
-                              '✅ Dispatch is here! You are now connected.')
-                      .get();
+                  // Check if takeover message already exists using a fixed ID for idempotency
+                  final takeoverMsgRef = ChatsRecord.createDoc(
+                      FFAppState().Call.refrence!,
+                      id: 'takeover_message');
+                  final takeoverDoc = await takeoverMsgRef.get();
 
-                  if (existingMessages.docs.isEmpty) {
-                    await ChatsRecord.createDoc(FFAppState().Call.refrence!)
-                        .set(createChatsRecordData(
+                  if (!takeoverDoc.exists) {
+                    await takeoverMsgRef.set(createChatsRecordData(
                       sender: 'AI',
                       message: '✅ Dispatch is here! You are now connected.',
                       timestamp: getCurrentTimestamp,
@@ -590,19 +586,7 @@ Always be compassionate and reassuring. Keep responses short and clear. NEVER fo
                                                           color: Colors.white,
                                                           fontSize: 12),
                                                     ),
-                                                    if (slachtofferVideoConnectionRecord
-                                                            .status ==
-                                                        Statuscall.active)
-                                                      Text(
-                                                        "DEBUG: Conn: $connState | ICE: $iceState",
-                                                        style: TextStyle(
-                                                            color: Colors
-                                                                .yellowAccent,
-                                                            fontSize: 10,
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .bold),
-                                                      ),
+
                                                   ],
                                                 );
                                               },
@@ -832,15 +816,6 @@ Always be compassionate and reassuring. Keep responses short and clear. NEVER fo
                             SizedBox(height: 12),
                             FFButtonWidget(
                               onPressed: () async {
-                                // Update status to ended to notify dispatcher
-                                try {
-                                  await slachtofferVideoConnectionRecord
-                                      .reference
-                                      .update({'status': 'ended'});
-                                } catch (e) {
-                                  print('Error updating status to ended: $e');
-                                }
-
                                 // Reset AppState
                                 FFAppState().deleteCall();
                                 FFAppState().Call = ActiveCallStruct();
@@ -889,74 +864,6 @@ Always be compassionate and reassuring. Keep responses short and clear. NEVER fo
                   ),
                 ),
               ),
-              if (!_hasLocationPermission)
-                Container(
-                  color: Colors.black.withOpacity(0.85),
-                  child: Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(24.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.location_off,
-                            color: Colors.white,
-                            size: 64,
-                          ),
-                          SizedBox(height: 16),
-                          Text(
-                            'Locatie Toestemming Vereist',
-                            textAlign: TextAlign.center,
-                            style: FlutterFlowTheme.of(context)
-                                .headlineSmall
-                                .override(
-                                  fontFamily: 'Outfit',
-                                  color: Colors.white,
-                                  letterSpacing: 0.0,
-                                ),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'Om u zo snel mogelijk te kunnen helpen, hebben we uw locatie nodig. Accepteer de toestemming om door te gaan.',
-                            textAlign: TextAlign.center,
-                            style: FlutterFlowTheme.of(context)
-                                .bodyMedium
-                                .override(
-                                  fontFamily: 'Readex Pro',
-                                  color: Colors.white70,
-                                  letterSpacing: 0.0,
-                                ),
-                          ),
-                          SizedBox(height: 24),
-                          FFButtonWidget(
-                            onPressed: () async {
-                              await _syncLocationImmediately();
-                            },
-                            text: 'Toestemming Geven',
-                            options: FFButtonOptions(
-                              width: double.infinity,
-                              height: 50,
-                              padding:
-                                  EdgeInsetsDirectional.fromSTEB(0, 0, 0, 0),
-                              iconPadding:
-                                  EdgeInsetsDirectional.fromSTEB(0, 0, 0, 0),
-                              color: FlutterFlowTheme.of(context).primary,
-                              textStyle: FlutterFlowTheme.of(context)
-                                  .titleSmall
-                                  .override(
-                                    fontFamily: 'Readex Pro',
-                                    color: Colors.white,
-                                    letterSpacing: 0.0,
-                                  ),
-                              elevation: 2,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
             ],
           ),
         );
@@ -964,3 +871,4 @@ Always be compassionate and reassuring. Keep responses short and clear. NEVER fo
     );
   }
 }
+

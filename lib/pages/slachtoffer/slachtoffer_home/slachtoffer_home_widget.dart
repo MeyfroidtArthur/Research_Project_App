@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'slachtoffer_home_model.dart';
 export 'slachtoffer_home_model.dart';
 
@@ -134,6 +136,42 @@ class _SlachtofferHomeWidgetState extends State<SlachtofferHomeWidget> {
                                   hoverColor: Colors.transparent,
                                   highlightColor: Colors.transparent,
                                   onLongPress: () async {
+                                    // 1. Check if Location Services (GPS) are enabled globally
+                                    bool isServiceEnabled =
+                                        await Geolocator.isLocationServiceEnabled();
+                                    if (!isServiceEnabled) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Location services (GPS) are disabled. Please enable them to continue.',
+                                            style: TextStyle(
+                                              color: FlutterFlowTheme.of(
+                                                      context)
+                                                  .primaryText,
+                                            ),
+                                          ),
+                                          backgroundColor:
+                                              FlutterFlowTheme.of(context)
+                                                  .secondaryBackground,
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    // 2. Check location permission status using permission_handler
+                                    PermissionStatus status =
+                                        await Permission.location.status;
+
+                                    if (!status.isGranted) {
+                                      bool granted =
+                                          await _showLocationPermissionDialog(
+                                              status);
+                                      if (!granted) return;
+                                    }
+
+                                    // 3. Permission is granted (or was just granted), proceed...
+
                                     var connectionRecordReference =
                                         ConnectionRecord.collection.doc();
                                     await connectionRecordReference
@@ -409,5 +447,122 @@ class _SlachtofferHomeWidgetState extends State<SlachtofferHomeWidget> {
         ),
       ),
     );
+  }
+  Future<bool> _showLocationPermissionDialog(
+      PermissionStatus currentStatus) async {
+    return await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) {
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  constraints: BoxConstraints(maxWidth: 350.0),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24.0),
+                  ),
+                  padding: EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.location_off,
+                        color: FlutterFlowTheme.of(context).primary,
+                        size: 48,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'Locatie Toestemming Vereist',
+                        textAlign: TextAlign.center,
+                        style: FlutterFlowTheme.of(context)
+                            .headlineSmall
+                            .override(
+                              fontFamily: 'Outfit',
+                              color: Colors.black,
+                              letterSpacing: 0.0,
+                            ),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Om u zo snel mogelijk te kunnen helpen, hebben we uw locatie nodig. Accepteer de toestemming om door te gaan.',
+                        textAlign: TextAlign.center,
+                        style: FlutterFlowTheme.of(context)
+                            .bodyMedium
+                            .override(
+                              fontFamily: 'Readex Pro',
+                              color: Colors.black87,
+                              letterSpacing: 0.0,
+                            ),
+                      ),
+                      SizedBox(height: 24),
+                      FFButtonWidget(
+                        onPressed: () async {
+                          if (currentStatus.isPermanentlyDenied) {
+                            await openAppSettings();
+                            Navigator.pop(dialogContext, false);
+                          } else {
+                            final status = await Permission.location.request();
+                            if (status.isGranted) {
+                              Navigator.pop(dialogContext, true);
+                            } else {
+                              Navigator.pop(dialogContext, false);
+                            }
+                          }
+                        },
+                        text: currentStatus.isPermanentlyDenied
+                            ? 'Open Instellingen'
+                            : 'Toestemming Geven',
+                        options: FFButtonOptions(
+                          width: double.infinity,
+                          height: 50,
+                          padding: EdgeInsetsDirectional.fromSTEB(0, 0, 0, 0),
+                          iconPadding:
+                              EdgeInsetsDirectional.fromSTEB(0, 0, 0, 0),
+                          color: FlutterFlowTheme.of(context).primary,
+                          textStyle:
+                              FlutterFlowTheme.of(context).titleSmall.override(
+                                    fontFamily: 'Readex Pro',
+                                    color: Colors.white,
+                                    letterSpacing: 0.0,
+                                  ),
+                          elevation: 0,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      SizedBox(height: 12),
+                      FFButtonWidget(
+                        onPressed: () {
+                          Navigator.pop(dialogContext, false);
+                        },
+                        text: 'Annuleren',
+                        options: FFButtonOptions(
+                          width: double.infinity,
+                          height: 50,
+                          padding: EdgeInsetsDirectional.fromSTEB(0, 0, 0, 0),
+                          iconPadding:
+                              EdgeInsetsDirectional.fromSTEB(0, 0, 0, 0),
+                          color: Colors.grey[200],
+                          textStyle:
+                              FlutterFlowTheme.of(context).titleSmall.override(
+                                    fontFamily: 'Readex Pro',
+                                    color: Colors.black,
+                                    letterSpacing: 0.0,
+                                  ),
+                          elevation: 0,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ) ??
+        false;
   }
 }
