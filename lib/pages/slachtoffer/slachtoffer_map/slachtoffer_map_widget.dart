@@ -30,10 +30,10 @@ class SlachtofferMapWidget extends StatefulWidget {
   static String routePath = '/slachtofferMap';
 
   // Static flags for navigation
-  static bool shouldStartNavigationToRedCross = false;
-  static double? targetRedCrossLat;
-  static double? targetRedCrossLng;
-  static String? targetRedCrossName;
+  static bool shouldStartNavigation = false;
+  static double? targetLat;
+  static double? targetLng;
+  static String? targetName;
 
   @override
   State<SlachtofferMapWidget> createState() => _SlachtofferMapWidgetState();
@@ -67,23 +67,22 @@ class _SlachtofferMapWidgetState extends State<SlachtofferMapWidget> {
     _startLocationUpdates();
     _startCompassUpdates();
 
-    // Check if we should auto-start navigation to Red Cross
-    if (SlachtofferMapWidget.shouldStartNavigationToRedCross) {
-      SlachtofferMapWidget.shouldStartNavigationToRedCross =
-          false; // Reset flag
+    // Check if we should auto-start navigation
+    if (SlachtofferMapWidget.shouldStartNavigation) {
+      SlachtofferMapWidget.shouldStartNavigation = false; // Reset flag
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted &&
-            SlachtofferMapWidget.targetRedCrossLat != null &&
-            SlachtofferMapWidget.targetRedCrossLng != null) {
+            SlachtofferMapWidget.targetLat != null &&
+            SlachtofferMapWidget.targetLng != null) {
           _startNavigationWithCoords(
-            SlachtofferMapWidget.targetRedCrossLat!,
-            SlachtofferMapWidget.targetRedCrossLng!,
-            SlachtofferMapWidget.targetRedCrossName ?? 'Red Cross Post',
+            SlachtofferMapWidget.targetLat!,
+            SlachtofferMapWidget.targetLng!,
+            SlachtofferMapWidget.targetName ?? 'Target Location',
           );
           // Clear the static variables
-          SlachtofferMapWidget.targetRedCrossLat = null;
-          SlachtofferMapWidget.targetRedCrossLng = null;
-          SlachtofferMapWidget.targetRedCrossName = null;
+          SlachtofferMapWidget.targetLat = null;
+          SlachtofferMapWidget.targetLng = null;
+          SlachtofferMapWidget.targetName = null;
         }
       });
     }

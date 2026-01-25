@@ -90,8 +90,9 @@ class _SlachtofferAIAssistantWidgetState
 
         5. LANGUAGE: Automatically detect the language of the user's message (English, Dutch, or French). You MUST reply in that same language.
 
-        6. LOCATION: If you are asked for where ehbo post or personel is you MUST output exactly: 
-           [[NAVIGATE_MAP]]
+        6. LOCATION: 
+           - If asked for where ehbo post or personel is you MUST output exactly: [[NAVIGATE_MAP]]
+           - If asked for where a toilet is you MUST output exactly: [[NAVIGATE_TOILET]]
         
         7. UNLIMITED SUPPORT: The user can ask as many questions as they need. Provide the most thorough, accurate, and helpful First Aid advice possible for every query.
 """),
@@ -109,16 +110,16 @@ class _SlachtofferAIAssistantWidgetState
     super.dispose();
   }
 
-  Future<MapPinsRecord?> _getNearestRedCross() async {
+  Future<MapPinsRecord?> _getNearestPin(String iconType) async {
     try {
       // Get user's current location
       final position = await Geolocator.getCurrentPosition();
       final userLat = position.latitude;
       final userLng = position.longitude;
 
-      // Query all red_cross pins
+      // Query pins by iconType
       final querySnapshot = await MapPinsRecord.collection
-          .where('iconType', isEqualTo: 'red_cross')
+          .where('iconType', isEqualTo: iconType)
           .get();
 
       if (querySnapshot.docs.isEmpty) {
@@ -340,7 +341,7 @@ class _SlachtofferAIAssistantWidgetState
 
           if (mounted) {
             // Find nearest Red Cross location
-            final nearestRedCross = await _getNearestRedCross();
+            final nearestRedCross = await _getNearestPin('red_cross');
 
             if (nearestRedCross != null) {
               // Ask user before navigating
@@ -406,12 +407,10 @@ class _SlachtofferAIAssistantWidgetState
 
               if (shouldNavigate == true && mounted) {
                 // Set static flags for navigation
-                SlachtofferMapWidget.shouldStartNavigationToRedCross = true;
-                SlachtofferMapWidget.targetRedCrossLat =
-                    nearestRedCross.latitude;
-                SlachtofferMapWidget.targetRedCrossLng =
-                    nearestRedCross.longitude;
-                SlachtofferMapWidget.targetRedCrossName = nearestRedCross.name;
+                SlachtofferMapWidget.shouldStartNavigation = true;
+                SlachtofferMapWidget.targetLat = nearestRedCross.latitude;
+                SlachtofferMapWidget.targetLng = nearestRedCross.longitude;
+                SlachtofferMapWidget.targetName = nearestRedCross.name;
 
                 // Navigate to map
                 context.pushNamed(
@@ -502,6 +501,174 @@ class _SlachtofferAIAssistantWidgetState
             }
           }
         }
+
+        if (aiResponse.contains('[[NAVIGATE_TOILET]]')) {
+          setState(() {
+            _model.isTyping = false;
+          });
+
+          if (mounted) {
+            // Find nearest Toilet location
+            final nearestToilet = await _getNearestPin('toilet');
+
+            if (nearestToilet != null) {
+              // Ask user before navigating
+              bool? shouldNavigate = await showDialog<bool>(
+                context: context,
+                builder: (alertDialogContext) {
+                  return AlertDialog(
+                    backgroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20.0),
+                    ),
+                    title: const Text(
+                      'Navigate to Toilet?',
+                      style: TextStyle(
+                          color: Colors.black, fontWeight: FontWeight.bold),
+                    ),
+                    content: Text(
+                      'I found the nearest toilet: ${nearestToilet.name}. Would you like to navigate there on the map?',
+                      style: const TextStyle(color: Colors.black),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () =>
+                            Navigator.pop(alertDialogContext, false),
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          side: BorderSide(
+                            color: FlutterFlowTheme.of(context).primary,
+                            width: 1.0,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(
+                            color: FlutterFlowTheme.of(context).primary,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () =>
+                            Navigator.pop(alertDialogContext, true),
+                        style: TextButton.styleFrom(
+                          backgroundColor: FlutterFlowTheme.of(context).primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                        ),
+                        child: const Text(
+                          'Navigate',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              );
+
+              if (shouldNavigate == true && mounted) {
+                // Set static flags for navigation
+                SlachtofferMapWidget.shouldStartNavigation = true;
+                SlachtofferMapWidget.targetLat = nearestToilet.latitude;
+                SlachtofferMapWidget.targetLng = nearestToilet.longitude;
+                SlachtofferMapWidget.targetName = nearestToilet.name;
+
+                // Navigate to map
+                context.pushNamed(
+                  SlachtofferMapWidget.routeName,
+                  extra: <String, dynamic>{
+                    kTransitionInfoKey: TransitionInfo(
+                      hasTransition: true,
+                      transitionType: PageTransitionType.fade,
+                      duration: Duration(milliseconds: 200),
+                    ),
+                  },
+                );
+              }
+            } else {
+              // Show dialog if no Toilet found
+              bool? shouldNavigate = await showDialog<bool>(
+                context: context,
+                builder: (alertDialogContext) {
+                  return AlertDialog(
+                    backgroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20.0),
+                    ),
+                    title: const Text(
+                      'No Toilets Found',
+                      style: TextStyle(
+                          color: Colors.black, fontWeight: FontWeight.bold),
+                    ),
+                    content: const Text(
+                      'No toilets are available in the current database. Would you like to view the map anyway?',
+                      style: TextStyle(color: Colors.black),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () =>
+                            Navigator.pop(alertDialogContext, false),
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          side: BorderSide(
+                            color: FlutterFlowTheme.of(context).primary,
+                            width: 1.0,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(
+                            color: FlutterFlowTheme.of(context).primary,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () =>
+                            Navigator.pop(alertDialogContext, true),
+                        style: TextButton.styleFrom(
+                          backgroundColor: FlutterFlowTheme.of(context).primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                        ),
+                        child: const Text(
+                          'View Map',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              );
+
+              if (shouldNavigate == true && mounted) {
+                context.pushNamed(
+                  SlachtofferMapWidget.routeName,
+                  extra: <String, dynamic>{
+                    kTransitionInfoKey: TransitionInfo(
+                      hasTransition: true,
+                      transitionType: PageTransitionType.fade,
+                      duration: Duration(milliseconds: 200),
+                    ),
+                  },
+                );
+              }
+            }
+          }
+        }
       } catch (e) {
         aiResponse = "Error communicating with AI: $e";
       }
@@ -523,6 +690,7 @@ class _SlachtofferAIAssistantWidgetState
         String displayResponse = aiResponse
             .replaceAll('[[EMERGENCY_ACTION]]', '')
             .replaceAll('[[NAVIGATE_MAP]]', '')
+            .replaceAll('[[NAVIGATE_TOILET]]', '')
             .trim();
 
         if (displayResponse.isNotEmpty) {

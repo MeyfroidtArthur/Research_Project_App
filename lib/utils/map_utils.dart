@@ -32,6 +32,9 @@ class MapUtils {
             PhosphorIcons.musicNote(), Color(0xFF8B5CF6)); // Purple
       case 'flag':
         return IconConfig(PhosphorIcons.flag(), Color(0xFF14B8A6)); // Teal
+      case 'toilet':
+        return IconConfig(
+            PhosphorIcons.toilet(), Color(0xFF0EA5E9)); // Sky Blue
       case 'default':
       default:
         return IconConfig(PhosphorIcons.mapPin(), Color(0xFF6B7280)); // Gray
