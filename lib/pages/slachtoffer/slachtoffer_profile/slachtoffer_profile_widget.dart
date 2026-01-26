@@ -1380,7 +1380,7 @@ class _SlachtofferProfileWidgetState extends State<SlachtofferProfileWidget> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Emergency contact',
+                            'Noodcontact',
                             style: FlutterFlowTheme.of(context)
                                 .bodyMedium
                                 .override(

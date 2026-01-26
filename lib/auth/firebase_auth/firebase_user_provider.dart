@@ -23,20 +23,6 @@ class RedivoAppFirebaseUser extends BaseAuthUser {
   Future? delete() => user?.delete();
 
   @override
-  Future? updateEmail(String email) async {
-    try {
-      await user?.updateEmail(email);
-    } catch (_) {
-      await user?.verifyBeforeUpdateEmail(email);
-    }
-  }
-
-  @override
-  Future? updatePassword(String newPassword) async {
-    await user?.updatePassword(newPassword);
-  }
-
-  @override
   Future? sendEmailVerification() => user?.sendEmailVerification();
 
   @override

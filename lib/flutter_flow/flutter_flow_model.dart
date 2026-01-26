@@ -164,9 +164,8 @@ T? _getDefaultValue<T>() {
       return '' as T;
     case bool:
       return false as T;
-    default:
-      return null as T;
   }
+  return null as T;
 }
 
 extension TextValidationExtensions on String? Function(BuildContext, String?)? {

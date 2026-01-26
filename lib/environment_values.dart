@@ -19,7 +19,7 @@ class FFDevEnvironmentValues {
     try {
       final String response =
           await rootBundle.loadString(environmentValuesPath);
-      final data = await json.decode(response);
+      await json.decode(response);
     } catch (e) {
       print('Error loading environment values: $e');
     }

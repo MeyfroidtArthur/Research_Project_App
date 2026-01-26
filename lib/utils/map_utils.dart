@@ -35,7 +35,6 @@ class MapUtils {
       case 'toilet':
         return IconConfig(
             PhosphorIcons.toilet(), Color(0xFF0EA5E9)); // Sky Blue
-      case 'default':
       default:
         return IconConfig(PhosphorIcons.mapPin(), Color(0xFF6B7280)); // Gray
     }

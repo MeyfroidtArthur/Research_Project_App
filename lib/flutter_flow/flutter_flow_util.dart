@@ -14,7 +14,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../main.dart';
 
-
 export 'lat_lng.dart';
 export 'place.dart';
 export 'uploaded_file.dart';
@@ -175,8 +174,6 @@ T? castToType<T>(dynamic value) {
       if (value is num && value.toInt() == value) {
         return value.toInt() as T;
       }
-      break;
-    default:
       break;
   }
   return value as T;

@@ -126,7 +126,7 @@ class _FlutterFlowRadioButtonState extends State<FlutterFlowRadioButton> {
     return Theme(
       data: Theme.of(context)
           .copyWith(unselectedWidgetColor: widget.inactiveRadioButtonColor),
-      child: RadioGroup<String>.builder(
+      child: _RadioGroup<String>.builder(
         direction: widget.direction,
         groupValue: controller.value,
         onChanged: enabled ? (value) => controller.value = value : null,
@@ -141,7 +141,7 @@ class _FlutterFlowRadioButtonState extends State<FlutterFlowRadioButton> {
         verticalAlignment: widget.verticalAlignment,
         items: effectiveOptions,
         itemBuilder: (item) =>
-            RadioButtonBuilder(item, buttonPosition: widget.buttonPosition),
+            _RadioButtonBuilder(item, buttonPosition: widget.buttonPosition),
         focusBorder: widget.focusBorder,
         focusBorderRadius: widget.focusBorderRadius,
         focusBorderPadding: widget.focusBorderPadding,
@@ -157,8 +157,8 @@ enum RadioButtonPosition {
   left,
 }
 
-class RadioButtonBuilder<T> {
-  RadioButtonBuilder(
+class _RadioButtonBuilder<T> {
+  _RadioButtonBuilder(
     this.description, {
     this.buttonPosition = RadioButtonPosition.left,
   });
@@ -167,8 +167,8 @@ class RadioButtonBuilder<T> {
   final RadioButtonPosition buttonPosition;
 }
 
-class RadioButton<T> extends StatelessWidget {
-  const RadioButton({
+class _RadioButton<T> extends StatelessWidget {
+  const _RadioButton({
     super.key,
     required this.description,
     required this.value,
@@ -205,8 +205,6 @@ class RadioButton<T> extends StatelessWidget {
 
   Widget _buildRadio(FocusNode? focusNode) {
     return Radio<T>(
-      groupValue: groupValue,
-      onChanged: onChanged,
       value: value,
       activeColor: activeColor,
       toggleable: toggleable,
@@ -278,8 +276,8 @@ class RadioButton<T> extends StatelessWidget {
   }
 }
 
-class RadioGroup<T> extends StatelessWidget {
-  const RadioGroup.builder({
+class _RadioGroup<T> extends StatelessWidget {
+  const _RadioGroup.builder({
     super.key,
     required this.groupValue,
     required this.onChanged,
@@ -303,8 +301,8 @@ class RadioGroup<T> extends StatelessWidget {
 
   final T? groupValue;
   final List<T> items;
-  final RadioButtonBuilder Function(T value) itemBuilder;
-  final void Function(T?)? onChanged;
+  final _RadioButtonBuilder Function(T value) itemBuilder;
+  final ValueChanged<T?>? onChanged;
   final Axis direction;
   final double optionHeight;
   final double? optionWidth;
@@ -326,7 +324,7 @@ class RadioGroup<T> extends StatelessWidget {
           return SizedBox(
             height: optionHeight,
             width: optionWidth,
-            child: RadioButton(
+            child: _RadioButton(
               description: radioButtonBuilder.description,
               value: item,
               groupValue: groupValue,
@@ -349,15 +347,36 @@ class RadioGroup<T> extends StatelessWidget {
       ).toList();
 
   @override
-  Widget build(BuildContext context) => direction == Axis.horizontal
-      ? Wrap(
-          direction: direction,
-          alignment: horizontalAlignment,
-          children: _group,
-        )
-      : Wrap(
-          direction: direction,
-          crossAxisAlignment: verticalAlignment,
-          children: _group,
-        );
+  Widget build(BuildContext context) {
+    final content = direction == Axis.horizontal
+        ? Wrap(
+            direction: direction,
+            alignment: horizontalAlignment,
+            children: _group,
+          )
+        : Wrap(
+            direction: direction,
+            crossAxisAlignment: verticalAlignment,
+            children: _group,
+          );
+
+    if (onChanged == null) {
+      return IgnorePointer(
+        child: Opacity(
+          opacity: 0.5,
+          child: RadioGroup<T>(
+            groupValue: groupValue,
+            onChanged: (T? _) {},
+            child: content,
+          ),
+        ),
+      );
+    }
+
+    return RadioGroup<T>(
+      groupValue: groupValue,
+      onChanged: onChanged!,
+      child: content,
+    );
+  }
 }

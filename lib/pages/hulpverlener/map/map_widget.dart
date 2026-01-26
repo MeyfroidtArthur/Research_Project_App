@@ -16,11 +16,9 @@ import 'package:geolocator/geolocator.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:http/http.dart' as http;
 import 'map_model.dart';
-import '/backend/schema/map_pins_record.dart';
 import '/utils/map_utils.dart';
 import '/utils/route_result.dart';
 import 'dart:async'; // For StreamSubscription
-import 'dart:convert';
 import 'dart:math' show pi;
 
 export 'map_model.dart';
@@ -441,14 +439,14 @@ class _MapWidgetState extends State<MapWidget> {
                 hoverColor: Colors.transparent,
                 highlightColor: Colors.transparent,
                 onTap: () async {
-                   // Update team status and stop location tracking before logout
-                   if (FFAppState().TeamId != null) {
-                     await FFAppState().TeamId!.update(createTeamsRecordData(
-                       status: TeamStatus.Unavailable,
-                     ));
-                   }
-                   final locationService = BackgroundLocationService();
-                   await locationService.stopTracking();
+                  // Update team status and stop location tracking before logout
+                  if (FFAppState().TeamId != null) {
+                    await FFAppState().TeamId!.update(createTeamsRecordData(
+                          status: TeamStatus.Unavailable,
+                        ));
+                  }
+                  final locationService = BackgroundLocationService();
+                  await locationService.stopTracking();
 
                   context.pushNamed(
                     SignUpWidget.routeName,
@@ -468,6 +466,15 @@ class _MapWidgetState extends State<MapWidget> {
 
                   FFAppState().deleteTeamId();
                   FFAppState().TeamId = null;
+
+                  FFAppState().deleteCall();
+                  FFAppState().Call = ActiveCallStruct();
+
+                  FFAppState().deleteStartTime();
+                  FFAppState().StartTime = null;
+
+                  FFAppState().deleteUser();
+                  FFAppState().User = UserStruct();
 
                   safeSetState(() {});
                 },
@@ -518,7 +525,6 @@ class _MapWidgetState extends State<MapWidget> {
                                     52.1326,
                                     5.2913,
                                   );
-                                  bool hasLocation = false;
 
                                   if (snapshot.hasData &&
                                       snapshot.data!.hasLocationCoordinates()) {
@@ -528,7 +534,6 @@ class _MapWidgetState extends State<MapWidget> {
                                       snapshot
                                           .data!.locationCoordinates!.longitude,
                                     );
-                                    hasLocation = true;
                                   } else if (FFAppState()
                                       .Event
                                       .hasLocationCoordinates()) {
@@ -543,7 +548,6 @@ class _MapWidgetState extends State<MapWidget> {
                                           .locationCoordinates!
                                           .longitude,
                                     );
-                                    hasLocation = true;
                                   }
 
                                   return StreamBuilder<List<InterventieRecord>>(
@@ -764,13 +768,15 @@ class _MapWidgetState extends State<MapWidget> {
                                                                   40, 40),
                                                           accuracyCircleColor:
                                                               Colors.blue
-                                                                  .withOpacity(
-                                                                      0.1),
+                                                                  .withValues(
+                                                                      alpha:
+                                                                          0.1),
                                                           headingSectorColor:
                                                               Colors
                                                                   .blue
-                                                                  .withOpacity(
-                                                                      0.25),
+                                                                  .withValues(
+                                                                      alpha:
+                                                                          0.25),
                                                           headingSectorRadius:
                                                               120,
                                                         ),
@@ -852,8 +858,9 @@ class _MapWidgetState extends State<MapWidget> {
                                                               blurRadius: 10,
                                                               color: Colors
                                                                   .black
-                                                                  .withOpacity(
-                                                                      0.1),
+                                                                  .withValues(
+                                                                      alpha:
+                                                                          0.1),
                                                               spreadRadius: 2,
                                                             )
                                                           ],
@@ -887,7 +894,7 @@ class _MapWidgetState extends State<MapWidget> {
                                                                       bottom:
                                                                           12.0),
                                                               child: Text(
-                                                                'LOCATIONS',
+                                                                'LOCATIES',
                                                                 style: FlutterFlowTheme.of(
                                                                         context)
                                                                     .labelMedium

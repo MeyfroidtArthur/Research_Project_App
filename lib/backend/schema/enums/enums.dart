@@ -42,7 +42,6 @@ T? deserializeEnum<T>(String? value) {
       return Uitgecheckt.values.deserialize(value) as T?;
     case (TeamStatus):
       return TeamStatus.values.deserialize(value) as T?;
-    default:
-      return null;
   }
+  return null;
 }

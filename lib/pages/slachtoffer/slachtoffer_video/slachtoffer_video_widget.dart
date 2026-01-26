@@ -33,12 +33,10 @@ class _SlachtofferVideoWidgetState extends State<SlachtofferVideoWidget> {
   late SlachtofferVideoModel _model;
   final scaffoldKey = GlobalKey<ScaffoldState>();
   late BackgroundLocationService _locationService;
-  late NotificationService _notificationService;
   Statuscall? _previousStatus;
   ChatSession? _chatSession;
   bool _isProcessingDispatchMessage = false;
   String? _selectedLanguage;
-  bool _hasLocationPermission = true; // Default to true to avoid flicker
   final WebRTCService _webrtcService = WebRTCService();
   bool _isMuted = false;
 
@@ -53,7 +51,6 @@ class _SlachtofferVideoWidgetState extends State<SlachtofferVideoWidget> {
     _model.textFieldFocusNode ??= FocusNode();
 
     _locationService = BackgroundLocationService();
-    _notificationService = NotificationService();
     _previousStatus = null;
 
     // Initialize Gemini AI for severity assessment
@@ -63,12 +60,21 @@ class _SlachtofferVideoWidgetState extends State<SlachtofferVideoWidget> {
     FlutterForegroundTask.addTaskDataCallback(_onReceiveTaskData);
 
     // Start background service for chat notifications
+    _initBackgroundService();
+  }
+
+  Future<void> _initBackgroundService() async {
     if (FFAppState().Call.refrence != null) {
-      _locationService.startCallMode(FFAppState().Call.refrence!.path);
-      // Suppress notifications while on this page
+      // 1. Await the service start properly
+      await _locationService.startCallMode(FFAppState().Call.refrence!.path);
+
+      // 2. Small delay to ensure isolate is ready to receive data
+      await Future.delayed(Duration(milliseconds: 500));
+
+      // 3. Suppress notifications while on this page
       FlutterForegroundTask.sendDataToTask('chat_opened');
 
-      // Immediate location sync and permission check
+      // 4. Immediate location sync and permission check
       _syncLocationImmediately();
     }
   }
@@ -78,18 +84,14 @@ class _SlachtofferVideoWidgetState extends State<SlachtofferVideoWidget> {
     final permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
-      setState(() => _hasLocationPermission = false);
       // Try to request
       final requested = await Geolocator.requestPermission();
       if (requested == LocationPermission.always ||
           requested == LocationPermission.whileInUse) {
-        setState(() => _hasLocationPermission = true);
       } else {
         return; // Still no permission
       }
-    } else {
-      setState(() => _hasLocationPermission = true);
-    }
+    } else {}
 
     // Immediate push to Firestore
     try {
@@ -586,7 +588,6 @@ Always be compassionate and reassuring. Keep responses short and clear. NEVER fo
                                                           color: Colors.white,
                                                           fontSize: 12),
                                                     ),
-
                                                   ],
                                                 );
                                               },
@@ -871,4 +872,3 @@ Always be compassionate and reassuring. Keep responses short and clear. NEVER fo
     );
   }
 }
-

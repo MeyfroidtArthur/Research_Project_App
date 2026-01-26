@@ -137,8 +137,8 @@ class _SlachtofferHomeWidgetState extends State<SlachtofferHomeWidget> {
                                   highlightColor: Colors.transparent,
                                   onLongPress: () async {
                                     // 1. Check if Location Services (GPS) are enabled globally
-                                    bool isServiceEnabled =
-                                        await Geolocator.isLocationServiceEnabled();
+                                    bool isServiceEnabled = await Geolocator
+                                        .isLocationServiceEnabled();
                                     if (!isServiceEnabled) {
                                       ScaffoldMessenger.of(context)
                                           .showSnackBar(
@@ -146,9 +146,9 @@ class _SlachtofferHomeWidgetState extends State<SlachtofferHomeWidget> {
                                           content: Text(
                                             'Location services (GPS) are disabled. Please enable them to continue.',
                                             style: TextStyle(
-                                              color: FlutterFlowTheme.of(
-                                                      context)
-                                                  .primaryText,
+                                              color:
+                                                  FlutterFlowTheme.of(context)
+                                                      .primaryText,
                                             ),
                                           ),
                                           backgroundColor:
@@ -251,7 +251,7 @@ class _SlachtofferHomeWidgetState extends State<SlachtofferHomeWidget> {
                                         child: Padding(
                                           padding: EdgeInsets.all(8.0),
                                           child: Text(
-                                            'Emergency',
+                                            'Noodgeval',
                                             textAlign: TextAlign.center,
                                             style: FlutterFlowTheme.of(context)
                                                 .titleMedium
@@ -287,7 +287,7 @@ class _SlachtofferHomeWidgetState extends State<SlachtofferHomeWidget> {
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 Text(
-                                  'Hold 2 seconds to call emergency services',
+                                  'Houd 2 seconden ingedrukt om de hulpdiensten te bellen.',
                                   textAlign: TextAlign.center,
                                   style: FlutterFlowTheme.of(context)
                                       .titleMedium
@@ -346,7 +346,7 @@ class _SlachtofferHomeWidgetState extends State<SlachtofferHomeWidget> {
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Text(
-                              'Or get help with',
+                              'Of krijg hulp met',
                               style: FlutterFlowTheme.of(context)
                                   .bodyMedium
                                   .override(
@@ -370,7 +370,7 @@ class _SlachtofferHomeWidgetState extends State<SlachtofferHomeWidget> {
                                 context.pushNamed(
                                     SlachtofferAIAssistantWidget.routeName);
                               },
-                              text: 'Ask AI Assistant',
+                              text: 'Vraag AI Assistant',
                               icon: Icon(
                                 FFIcons.kquestion,
                                 size: 15.0,
@@ -448,6 +448,7 @@ class _SlachtofferHomeWidgetState extends State<SlachtofferHomeWidget> {
       ),
     );
   }
+
   Future<bool> _showLocationPermissionDialog(
       PermissionStatus currentStatus) async {
     return await showDialog(
@@ -478,21 +479,18 @@ class _SlachtofferHomeWidgetState extends State<SlachtofferHomeWidget> {
                       Text(
                         'Locatie Toestemming Vereist',
                         textAlign: TextAlign.center,
-                        style: FlutterFlowTheme.of(context)
-                            .headlineSmall
-                            .override(
-                              fontFamily: 'Outfit',
-                              color: Colors.black,
-                              letterSpacing: 0.0,
-                            ),
+                        style:
+                            FlutterFlowTheme.of(context).headlineSmall.override(
+                                  fontFamily: 'Outfit',
+                                  color: Colors.black,
+                                  letterSpacing: 0.0,
+                                ),
                       ),
                       SizedBox(height: 8),
                       Text(
                         'Om u zo snel mogelijk te kunnen helpen, hebben we uw locatie nodig. Accepteer de toestemming om door te gaan.',
                         textAlign: TextAlign.center,
-                        style: FlutterFlowTheme.of(context)
-                            .bodyMedium
-                            .override(
+                        style: FlutterFlowTheme.of(context).bodyMedium.override(
                               fontFamily: 'Readex Pro',
                               color: Colors.black87,
                               letterSpacing: 0.0,

@@ -1,5 +1,5 @@
 import '/backend/backend.dart';
-import '/components/wrong_code_widget.dart';
+
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
@@ -297,7 +297,8 @@ class _SignUpWidgetState extends State<SignUpWidget> {
                                     code: _model.qrCodeData,
                                     start: _model
                                         .eventListVrijwilligerQR?.startTime,
-                                    end: _model.eventListVrijwilligerQR?.endTime,
+                                    end:
+                                        _model.eventListVrijwilligerQR?.endTime,
                                     id: _model
                                         .eventListVrijwilligerQR?.reference,
                                   );
@@ -316,60 +317,73 @@ class _SignUpWidgetState extends State<SignUpWidget> {
                                   if (_model
                                           .eventListSlachtofferQR?.reference !=
                                       null) {
-                                    FFAppState().Event = EventStruct(
-                                      naam: _model.eventListSlachtofferQR?.naam,
-                                      locatie: _model
-                                          .eventListSlachtofferQR?.locatie,
-                                      code: _model.qrCodeData,
-                                      start: _model
-                                          .eventListSlachtofferQR?.startTime,
-                                      end: _model
-                                          .eventListSlachtofferQR?.endTime,
-                                      id: _model
-                                          .eventListSlachtofferQR?.reference,
-                                    );
-                                    safeSetState(() {});
+                                    final now = DateTime.now();
+                                    final event = _model.eventListSlachtofferQR;
 
-                                    context.pushNamed(
-                                      SlachtofferHomeWidget.routeName,
-                                      extra: <String, dynamic>{
-                                        kTransitionInfoKey: TransitionInfo(
-                                          hasTransition: true,
-                                          transitionType:
-                                              PageTransitionType.fade,
-                                        ),
-                                      },
-                                    );
-                                  } else {
-                                    await showDialog(
-                                      context: context,
-                                      builder: (dialogContext) {
-                                        Future.delayed(Duration(seconds: 1), () {
-                                          if (Navigator.of(dialogContext)
-                                              .canPop()) {
-                                            Navigator.pop(dialogContext);
-                                          }
-                                        });
-                                        return Dialog(
-                                          elevation: 0,
-                                          insetPadding: EdgeInsets.zero,
-                                          backgroundColor: Colors.transparent,
-                                          alignment: AlignmentDirectional(
-                                                  0.0, 0.0)
-                                              .resolve(
-                                                  Directionality.of(context)),
-                                          child: GestureDetector(
-                                            onTap: () {
-                                              FocusScope.of(dialogContext)
-                                                  .unfocus();
-                                              FocusManager.instance.primaryFocus
-                                                  ?.unfocus();
-                                            },
-                                            child: WrongCodeWidget(),
+                                    if (event?.reference != null) {
+                                      // Check if event has started
+                                      if (event?.startTime != null &&
+                                          now.isBefore(event!.startTime!)) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content:
+                                                Text('Event nog niet gestart'),
+                                            backgroundColor:
+                                                FlutterFlowTheme.of(context)
+                                                    .error,
                                           ),
                                         );
-                                      },
-                                    );
+                                        return;
+                                      }
+
+                                      // Check if event has ended
+                                      if (event?.endTime != null &&
+                                          now.isAfter(event!.endTime!)) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                                'Event is gedaan code niet meer beschikbaar'),
+                                            backgroundColor:
+                                                FlutterFlowTheme.of(context)
+                                                    .error,
+                                          ),
+                                        );
+                                        return;
+                                      }
+
+                                      FFAppState().Event = EventStruct(
+                                        naam: event?.naam,
+                                        locatie: event?.locatie,
+                                        code: _model.qrCodeData,
+                                        start: event?.startTime,
+                                        end: event?.endTime,
+                                        id: event?.reference,
+                                      );
+                                      safeSetState(() {});
+
+                                      context.pushNamed(
+                                        SlachtofferHomeWidget.routeName,
+                                        extra: <String, dynamic>{
+                                          kTransitionInfoKey: TransitionInfo(
+                                            hasTransition: true,
+                                            transitionType:
+                                                PageTransitionType.fade,
+                                          ),
+                                        },
+                                      );
+                                    } else {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text('Foute code'),
+                                          backgroundColor:
+                                              FlutterFlowTheme.of(context)
+                                                  .error,
+                                        ),
+                                      );
+                                    }
                                   }
                                 }
 
@@ -426,7 +440,6 @@ class _SignUpWidgetState extends State<SignUpWidget> {
                                   ).then((s) => s.firstOrNull);
                                   _shouldSetState = true;
                                 } else {
-                                  if (_shouldSetState) safeSetState(() {});
                                   return;
                                 }
 
@@ -440,6 +453,7 @@ class _SignUpWidgetState extends State<SignUpWidget> {
                                   singleRecord: true,
                                 ).then((s) => s.firstOrNull);
                                 _shouldSetState = true;
+
                                 if (_model.eventListVrijwilliger?.reference !=
                                     null) {
                                   FFAppState().Event = EventStruct(
@@ -463,63 +477,65 @@ class _SignUpWidgetState extends State<SignUpWidget> {
                                       ),
                                     },
                                   );
-                                } else {
-                                  if (_model.eventListSlachtoffer?.reference !=
-                                      null) {
-                                    FFAppState().Event = EventStruct(
-                                      naam: _model.eventListSlachtoffer?.naam,
-                                      locatie:
-                                          _model.eventListSlachtoffer?.locatie,
-                                      code: _model.codeTextController.text,
-                                      start: _model
-                                          .eventListSlachtoffer?.startTime,
-                                      end: _model.eventListSlachtoffer?.endTime,
-                                      id: _model
-                                          .eventListSlachtoffer?.reference,
-                                    );
-                                    safeSetState(() {});
+                                } else if (_model
+                                        .eventListSlachtoffer?.reference !=
+                                    null) {
+                                  final now = DateTime.now();
+                                  final event = _model.eventListSlachtoffer;
 
-                                    context.pushNamed(
-                                      SlachtofferHomeWidget.routeName,
-                                      extra: <String, dynamic>{
-                                        kTransitionInfoKey: TransitionInfo(
-                                          hasTransition: true,
-                                          transitionType:
-                                              PageTransitionType.fade,
-                                        ),
-                                      },
+                                  // Check time validity
+                                  if (event?.startTime != null &&
+                                      now.isBefore(event!.startTime!)) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Event nog niet gestart'),
+                                        backgroundColor:
+                                            FlutterFlowTheme.of(context).error,
+                                      ),
                                     );
-                                  } else {
-                                    await showDialog(
-                                      context: context,
-                                      builder: (dialogContext) {
-                                        Future.delayed(Duration(seconds: 1), () {
-                                          if (Navigator.of(dialogContext)
-                                              .canPop()) {
-                                            Navigator.pop(dialogContext);
-                                          }
-                                        });
-                                        return Dialog(
-                                          elevation: 0,
-                                          insetPadding: EdgeInsets.zero,
-                                          backgroundColor: Colors.transparent,
-                                          alignment: AlignmentDirectional(
-                                                  0.0, 0.0)
-                                              .resolve(
-                                                  Directionality.of(context)),
-                                          child: GestureDetector(
-                                            onTap: () {
-                                              FocusScope.of(dialogContext)
-                                                  .unfocus();
-                                              FocusManager.instance.primaryFocus
-                                                  ?.unfocus();
-                                            },
-                                            child: WrongCodeWidget(),
-                                          ),
-                                        );
-                                      },
-                                    );
+                                    return;
                                   }
+
+                                  if (event?.endTime != null &&
+                                      now.isAfter(event!.endTime!)) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                            'Event is gedaan code niet meer beschikbaar'),
+                                        backgroundColor:
+                                            FlutterFlowTheme.of(context).error,
+                                      ),
+                                    );
+                                    return;
+                                  }
+
+                                  FFAppState().Event = EventStruct(
+                                    naam: event?.naam,
+                                    locatie: event?.locatie,
+                                    code: _model.codeTextController.text,
+                                    start: event?.startTime,
+                                    end: event?.endTime,
+                                    id: event?.reference,
+                                  );
+                                  safeSetState(() {});
+
+                                  context.pushNamed(
+                                    SlachtofferHomeWidget.routeName,
+                                    extra: <String, dynamic>{
+                                      kTransitionInfoKey: TransitionInfo(
+                                        hasTransition: true,
+                                        transitionType: PageTransitionType.fade,
+                                      ),
+                                    },
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Foute code'),
+                                      backgroundColor:
+                                          FlutterFlowTheme.of(context).error,
+                                    ),
+                                  );
                                 }
 
                                 if (_shouldSetState) safeSetState(() {});

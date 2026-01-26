@@ -36,7 +36,6 @@ class BackgroundLocationService {
 
   BackgroundLocationService._internal();
 
-  String? _currentTeamPath;
   bool _isInitialized = false;
 
   /// Initialize the foreground task service
@@ -87,8 +86,6 @@ class BackgroundLocationService {
       await initialize();
     }
 
-    _currentTeamPath = teamPath;
-
     await FlutterForegroundTask.saveData(key: 'teamPath', value: teamPath);
 
     await FlutterForegroundTask.startService(
@@ -122,8 +119,6 @@ class BackgroundLocationService {
       return;
     }
 
-    _currentTeamPath = null; // No team path in call mode
-
     await FlutterForegroundTask.saveData(key: 'callPath', value: callPath);
     // Ensure teamPath is cleared so we don't accidentally run team logic
     await FlutterForegroundTask.removeData(key: 'teamPath');
@@ -137,7 +132,6 @@ class BackgroundLocationService {
   }
 
   Future<void> stopTracking() async {
-    _currentTeamPath = null;
     await FlutterForegroundTask.stopService();
   }
 

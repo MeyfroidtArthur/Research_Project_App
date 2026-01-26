@@ -94,9 +94,6 @@ String? serializeParam(
 
       case ParamType.Enum:
         data = (param is Enum) ? param.serialize() : null;
-
-      default:
-        data = null;
     }
     return data;
   } catch (e) {
@@ -245,6 +242,7 @@ dynamic deserializeParam<T>(
         return uploadedFileFromString(param);
       case ParamType.JSON:
         return json.decode(param);
+      case ParamType.Document:
       case ParamType.DocumentReference:
         return _deserializeDocumentReference(param, collectionNamePath ?? []);
 
@@ -254,9 +252,6 @@ dynamic deserializeParam<T>(
 
       case ParamType.Enum:
         return deserializeEnum<T>(param);
-
-      default:
-        return null;
     }
   } catch (e) {
     print('Error deserializing parameter: $e');

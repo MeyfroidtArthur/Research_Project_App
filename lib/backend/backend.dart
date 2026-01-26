@@ -336,16 +336,19 @@ Future<int> queryCollectionCount(
   Query collection, {
   Query Function(Query)? queryBuilder,
   int limit = -1,
-}) {
+}) async {
   final builder = queryBuilder ?? (q) => q;
   var query = builder(collection);
   if (limit > 0) {
     query = query.limit(limit);
   }
 
-  return query.count().get().catchError((err) {
+  try {
+    return await query.count().get().then((value) => value.count!);
+  } catch (err) {
     print('Error querying $collection: $err');
-  }).then((value) => value.count!);
+    rethrow;
+  }
 }
 
 Stream<List<T>> queryCollection<T>(

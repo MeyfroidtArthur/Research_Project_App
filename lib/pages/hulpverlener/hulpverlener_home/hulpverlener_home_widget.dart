@@ -141,8 +141,8 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
                   // Update team status and stop location tracking before logout
                   if (FFAppState().TeamId != null) {
                     await FFAppState().TeamId!.update(createTeamsRecordData(
-                      status: TeamStatus.Unavailable,
-                    ));
+                          status: TeamStatus.Unavailable,
+                        ));
                   }
                   await _locationService.stopTracking();
 
@@ -164,6 +164,15 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
 
                   FFAppState().deleteTeamId();
                   FFAppState().TeamId = null;
+
+                  FFAppState().deleteCall();
+                  FFAppState().Call = ActiveCallStruct();
+
+                  FFAppState().deleteStartTime();
+                  FFAppState().StartTime = null;
+
+                  FFAppState().deleteUser();
+                  FFAppState().User = UserStruct();
 
                   safeSetState(() {});
                 },
@@ -211,7 +220,7 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
                                       MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      'Choose team',
+                                      'Kies team',
                                       style: FlutterFlowTheme.of(context)
                                           .titleSmall
                                           .override(
@@ -257,18 +266,23 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
                                           _model.dropDownValueController
                                               ?.value = null;
                                           safeSetState(() {});
-                                          
-                                          ScaffoldMessenger.of(context).showSnackBar(
+
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
                                             SnackBar(
-                                              content: Text('Team gedeselecteerd'),
-                                              backgroundColor: FlutterFlowTheme.of(context).secondaryText,
+                                              content:
+                                                  Text('Team gedeselecteerd'),
+                                              backgroundColor:
+                                                  FlutterFlowTheme.of(context)
+                                                      .secondaryText,
                                             ),
                                           );
                                         },
                                         style: TextButton.styleFrom(
                                           padding: EdgeInsets.zero,
                                           minimumSize: Size.zero,
-                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                          tapTargetSize:
+                                              MaterialTapTargetSize.shrinkWrap,
                                         ),
                                         child: Text(
                                           'Reset',
@@ -593,7 +607,7 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
                                       mainAxisSize: MainAxisSize.max,
                                       children: [
                                         Text(
-                                          'Active Interventie - ',
+                                          'Actieve Interventie - ',
                                           style: FlutterFlowTheme.of(context)
                                               .titleSmall
                                               .override(
@@ -1372,8 +1386,9 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
                                         ],
                                       ),
                                       Container(
-                                        width: MediaQuery.sizeOf(context).width *
-                                            1.0,
+                                        width:
+                                            MediaQuery.sizeOf(context).width *
+                                                1.0,
                                         decoration: BoxDecoration(
                                           color: FlutterFlowTheme.of(context)
                                               .primaryBackground,
@@ -1387,8 +1402,9 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
                                             padding: EdgeInsets.all(16.0),
                                             child: Text(
                                               'Kies een team om berichten te krijgen.',
-                                              style: FlutterFlowTheme.of(context)
-                                                  .bodyMedium,
+                                              style:
+                                                  FlutterFlowTheme.of(context)
+                                                      .bodyMedium,
                                             ),
                                           ),
                                         ),
@@ -1432,13 +1448,12 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
                                       snapshot.data!;
 
                                   return Container(
-                                    width: MediaQuery.sizeOf(context).width *
-                                        1.0,
+                                    width:
+                                        MediaQuery.sizeOf(context).width * 1.0,
                                     decoration: BoxDecoration(
                                       color: FlutterFlowTheme.of(context)
                                           .secondaryBackground,
-                                      borderRadius:
-                                          BorderRadius.circular(10.0),
+                                      borderRadius: BorderRadius.circular(10.0),
                                     ),
                                     child: Padding(
                                       padding: EdgeInsets.all(16.0),
@@ -1497,10 +1512,9 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
                                                             .width *
                                                         1.0,
                                                     decoration: BoxDecoration(
-                                                      color:
-                                                          FlutterFlowTheme.of(
-                                                                  context)
-                                                              .primaryBackground,
+                                                      color: FlutterFlowTheme
+                                                              .of(context)
+                                                          .primaryBackground,
                                                       borderRadius:
                                                           BorderRadius.circular(
                                                               10.0),
@@ -1527,10 +1541,10 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
                                                                     fontWeight:
                                                                         FontWeight
                                                                             .w600,
-                                                                    fontStyle:
-                                                                        FlutterFlowTheme.of(context)
-                                                                            .labelMedium
-                                                                            .fontStyle,
+                                                                    fontStyle: FlutterFlowTheme.of(
+                                                                            context)
+                                                                        .labelMedium
+                                                                        .fontStyle,
                                                                   ),
                                                                   color: FlutterFlowTheme.of(
                                                                           context)
@@ -1540,59 +1554,75 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
                                                                   fontWeight:
                                                                       FontWeight
                                                                           .w600,
-                                                                  fontStyle:
-                                                                      FlutterFlowTheme.of(context)
-                                                                          .labelMedium
-                                                                          .fontStyle,
+                                                                  fontStyle: FlutterFlowTheme.of(
+                                                                          context)
+                                                                      .labelMedium
+                                                                      .fontStyle,
                                                                 ),
                                                           ),
                                                           Text(
                                                             containerVarItem
                                                                 .message,
-                                                            style:
-                                                                FlutterFlowTheme.of(
-                                                                        context)
-                                                                    .bodySmall
-                                                                    .override(
-                                                                      font:
-                                                                          GoogleFonts.inter(
-                                                                        fontWeight:
-                                                                            FlutterFlowTheme.of(context).bodySmall.fontWeight,
-                                                                        fontStyle:
-                                                                            FlutterFlowTheme.of(context).bodySmall.fontStyle,
-                                                                      ),
-                                                                      letterSpacing:
-                                                                          0.0,
-                                                                      fontWeight:
-                                                                          FlutterFlowTheme.of(context).bodySmall.fontWeight,
-                                                                      fontStyle:
-                                                                          FlutterFlowTheme.of(context).bodySmall.fontStyle,
-                                                                    ),
+                                                            style: FlutterFlowTheme
+                                                                    .of(context)
+                                                                .bodySmall
+                                                                .override(
+                                                                  font:
+                                                                      GoogleFonts
+                                                                          .inter(
+                                                                    fontWeight: FlutterFlowTheme.of(
+                                                                            context)
+                                                                        .bodySmall
+                                                                        .fontWeight,
+                                                                    fontStyle: FlutterFlowTheme.of(
+                                                                            context)
+                                                                        .bodySmall
+                                                                        .fontStyle,
+                                                                  ),
+                                                                  letterSpacing:
+                                                                      0.0,
+                                                                  fontWeight: FlutterFlowTheme.of(
+                                                                          context)
+                                                                      .bodySmall
+                                                                      .fontWeight,
+                                                                  fontStyle: FlutterFlowTheme.of(
+                                                                          context)
+                                                                      .bodySmall
+                                                                      .fontStyle,
+                                                                ),
                                                           ),
                                                           Text(
                                                             dateTimeFormat(
                                                                 "dd/MM/yyyy HH:mm",
                                                                 containerVarItem
                                                                     .time!),
-                                                            style:
-                                                                FlutterFlowTheme.of(
-                                                                        context)
-                                                                    .bodySmall
-                                                                    .override(
-                                                                      font:
-                                                                          GoogleFonts.inter(
-                                                                        fontWeight:
-                                                                            FlutterFlowTheme.of(context).bodySmall.fontWeight,
-                                                                        fontStyle:
-                                                                            FlutterFlowTheme.of(context).bodySmall.fontStyle,
-                                                                      ),
-                                                                      letterSpacing:
-                                                                          0.0,
-                                                                      fontWeight:
-                                                                          FlutterFlowTheme.of(context).bodySmall.fontWeight,
-                                                                      fontStyle:
-                                                                          FlutterFlowTheme.of(context).bodySmall.fontStyle,
-                                                                    ),
+                                                            style: FlutterFlowTheme
+                                                                    .of(context)
+                                                                .bodySmall
+                                                                .override(
+                                                                  font:
+                                                                      GoogleFonts
+                                                                          .inter(
+                                                                    fontWeight: FlutterFlowTheme.of(
+                                                                            context)
+                                                                        .bodySmall
+                                                                        .fontWeight,
+                                                                    fontStyle: FlutterFlowTheme.of(
+                                                                            context)
+                                                                        .bodySmall
+                                                                        .fontStyle,
+                                                                  ),
+                                                                  letterSpacing:
+                                                                      0.0,
+                                                                  fontWeight: FlutterFlowTheme.of(
+                                                                          context)
+                                                                      .bodySmall
+                                                                      .fontWeight,
+                                                                  fontStyle: FlutterFlowTheme.of(
+                                                                          context)
+                                                                      .bodySmall
+                                                                      .fontStyle,
+                                                                ),
                                                           ),
                                                         ].divide(SizedBox(
                                                             height: 4.0)),
@@ -1645,24 +1675,34 @@ class _HulpverlenerHomeWidgetState extends State<HulpverlenerHomeWidget> {
                                                           EdgeInsets.all(16.0),
                                                       child: Text(
                                                         'Geen recente berichten',
-                                                        style: FlutterFlowTheme.of(
-                                                                context)
-                                                            .bodyMedium
-                                                            .override(
-                                                              font: GoogleFonts
-                                                                  .inter(
-                                                                fontWeight:
-                                                                    FlutterFlowTheme.of(context).bodyMedium.fontWeight,
-                                                                fontStyle:
-                                                                    FlutterFlowTheme.of(context).bodyMedium.fontStyle,
-                                                              ),
-                                                              letterSpacing:
-                                                                  0.0,
-                                                              fontWeight:
-                                                                  FlutterFlowTheme.of(context).bodyMedium.fontWeight,
-                                                              fontStyle:
-                                                                  FlutterFlowTheme.of(context).bodyMedium.fontStyle,
-                                                            ),
+                                                        style:
+                                                            FlutterFlowTheme.of(
+                                                                    context)
+                                                                .bodyMedium
+                                                                .override(
+                                                                  font:
+                                                                      GoogleFonts
+                                                                          .inter(
+                                                                    fontWeight: FlutterFlowTheme.of(
+                                                                            context)
+                                                                        .bodyMedium
+                                                                        .fontWeight,
+                                                                    fontStyle: FlutterFlowTheme.of(
+                                                                            context)
+                                                                        .bodyMedium
+                                                                        .fontStyle,
+                                                                  ),
+                                                                  letterSpacing:
+                                                                      0.0,
+                                                                  fontWeight: FlutterFlowTheme.of(
+                                                                          context)
+                                                                      .bodyMedium
+                                                                      .fontWeight,
+                                                                  fontStyle: FlutterFlowTheme.of(
+                                                                          context)
+                                                                      .bodyMedium
+                                                                      .fontStyle,
+                                                                ),
                                                       ),
                                                     ),
                                                   ),

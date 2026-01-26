@@ -138,7 +138,7 @@ class _CompassDisplayWidgetState extends State<CompassDisplayWidget> {
             const SizedBox(height: 8),
             Text(
               _distanceText,
-              style: FlutterFlowTheme.of(context).displaySmall?.copyWith(
+              style: FlutterFlowTheme.of(context).displaySmall.copyWith(
                     color: FlutterFlowTheme.of(context).primary,
                     fontWeight: FontWeight.bold,
                   ),

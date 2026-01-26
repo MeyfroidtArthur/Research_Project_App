@@ -7,14 +7,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:geolocator/geolocator.dart';
-import 'dart:math' show sqrt, cos, sin, atan2, pi;
+import 'dart:math' show sqrt, cos, sin, atan2;
 import 'slachtoffer_ai_assistant_model.dart';
 import '/backend/backend.dart';
 import '/backend/schema/enums/enums.dart';
-import '/backend/schema/structs/index.dart';
 import '/index.dart';
-
-import '/pages/slachtoffer/slachtoffer_map/slachtoffer_map_widget.dart';
 
 // SlachtofferVideoWidget import might be in index.dart, but let's be safe or just rely on index.dart
 export 'slachtoffer_ai_assistant_model.dart';
@@ -245,12 +242,12 @@ class _SlachtofferAIAssistantWidgetState
                     borderRadius: BorderRadius.circular(20.0),
                   ),
                   title: const Text(
-                    'EMERGENCY DETECTED',
+                    'Noodgeval gedetecteerd',
                     style: TextStyle(
                         color: Colors.black, fontWeight: FontWeight.bold),
                   ),
                   content: const Text(
-                    'Do you want to call emergency services immediately?',
+                    'Wilt u de noodhulp direct opstellen?',
                     style: TextStyle(color: Colors.black),
                   ),
                   actions: [
@@ -282,7 +279,7 @@ class _SlachtofferAIAssistantWidgetState
                         ),
                       ),
                       child: const Text(
-                        'CALL NOW',
+                        'Bel nu',
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -354,12 +351,12 @@ class _SlachtofferAIAssistantWidgetState
                       borderRadius: BorderRadius.circular(20.0),
                     ),
                     title: const Text(
-                      'Navigate to Red Cross?',
+                      'Navigeer naar Rode-Kruis?',
                       style: TextStyle(
                           color: Colors.black, fontWeight: FontWeight.bold),
                     ),
                     content: Text(
-                      'I found the nearest Red Cross First Aid post: ${nearestRedCross.name}. Would you like to navigate there on the map?',
+                      'Ik heb de dichtstbijzijnde Rode-Kruis First Aid post gevonden: ${nearestRedCross.name}. Wil je deze op de kaart navigeren?',
                       style: const TextStyle(color: Colors.black),
                     ),
                     actions: [
@@ -393,7 +390,7 @@ class _SlachtofferAIAssistantWidgetState
                           ),
                         ),
                         child: const Text(
-                          'Navigate',
+                          'Navigeer',
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -522,12 +519,12 @@ class _SlachtofferAIAssistantWidgetState
                       borderRadius: BorderRadius.circular(20.0),
                     ),
                     title: const Text(
-                      'Navigate to Toilet?',
+                      'Navigeer naar toilet?',
                       style: TextStyle(
                           color: Colors.black, fontWeight: FontWeight.bold),
                     ),
                     content: Text(
-                      'I found the nearest toilet: ${nearestToilet.name}. Would you like to navigate there on the map?',
+                      'Ik heb de dichtstbijzijnde tolet gevonden: ${nearestToilet.name}. Wil je deze op de kaart navigeren?',
                       style: const TextStyle(color: Colors.black),
                     ),
                     actions: [
@@ -561,7 +558,7 @@ class _SlachtofferAIAssistantWidgetState
                           ),
                         ),
                         child: const Text(
-                          'Navigate',
+                          'Navigeer',
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -603,12 +600,12 @@ class _SlachtofferAIAssistantWidgetState
                       borderRadius: BorderRadius.circular(20.0),
                     ),
                     title: const Text(
-                      'No Toilets Found',
+                      'Geen toleten gevonden',
                       style: TextStyle(
                           color: Colors.black, fontWeight: FontWeight.bold),
                     ),
                     content: const Text(
-                      'No toilets are available in the current database. Would you like to view the map anyway?',
+                      'Geen toleten gevonden in de huidige database. Wil je toch de kaart zien?',
                       style: TextStyle(color: Colors.black),
                     ),
                     actions: [
@@ -879,7 +876,7 @@ class _SlachtofferAIAssistantWidgetState
                               focusNode: _model.textFieldFocusNode,
                               autofocus: false,
                               decoration: InputDecoration(
-                                hintText: 'Type a message...',
+                                hintText: 'Type een bericht...',
                                 hintStyle: TextStyle(color: Colors.grey),
                                 filled: true,
                                 fillColor: Colors.grey[100],
