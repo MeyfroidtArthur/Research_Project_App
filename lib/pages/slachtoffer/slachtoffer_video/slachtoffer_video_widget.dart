@@ -29,7 +29,8 @@ class SlachtofferVideoWidget extends StatefulWidget {
   State<SlachtofferVideoWidget> createState() => _SlachtofferVideoWidgetState();
 }
 
-class _SlachtofferVideoWidgetState extends State<SlachtofferVideoWidget> {
+class _SlachtofferVideoWidgetState extends State<SlachtofferVideoWidget>
+    with WidgetsBindingObserver {
   late SlachtofferVideoModel _model;
   final scaffoldKey = GlobalKey<ScaffoldState>();
   late BackgroundLocationService _locationService;
@@ -58,6 +59,9 @@ class _SlachtofferVideoWidgetState extends State<SlachtofferVideoWidget> {
 
     // Listen for messages from background service
     FlutterForegroundTask.addTaskDataCallback(_onReceiveTaskData);
+
+    // Listen for app lifecycle changes (background/foreground)
+    WidgetsBinding.instance.addObserver(this);
 
     // Start background service for chat notifications
     _initBackgroundService();
@@ -317,7 +321,28 @@ Always be compassionate and reassuring. Keep responses short and clear. NEVER fo
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    // When app goes to background, enable notifications
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      print('📱 App went to background - enabling chat notifications');
+      FlutterForegroundTask.sendDataToTask('chat_closed');
+    }
+
+    // When app returns to foreground, disable notifications (user is viewing chat)
+    else if (state == AppLifecycleState.resumed) {
+      print('📱 App returned to foreground - disabling chat notifications');
+      FlutterForegroundTask.sendDataToTask('chat_opened');
+    }
+  }
+
+  @override
   void dispose() {
+    // Remove lifecycle observer
+    WidgetsBinding.instance.removeObserver(this);
     // Resume notifications when leaving the page
     FlutterForegroundTask.sendDataToTask('chat_closed');
     FlutterForegroundTask.removeTaskDataCallback(_onReceiveTaskData);
