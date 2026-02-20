@@ -189,7 +189,7 @@ class _FlutterFlowDropDownState<T> extends State<FlutterFlowDropDown<T>> {
       initialValue: currentValue,
       hint: _createHintText(),
       items: _createMenuItems(),
-      elevation: widget.elevation.toInt(),
+      elevation: widget.elevation.isFinite ? widget.elevation.toInt() : 0,
       onChanged: widget.disabled ? null : (value) => controller.value = value,
       icon: widget.icon,
       isExpanded: true,
@@ -288,7 +288,7 @@ class _FlutterFlowDropDownState<T> extends State<FlutterFlowDropDown<T>> {
       items: isMultiSelect ? _createMultiselectMenuItems() : _createMenuItems(),
       iconStyleData: iconStyleData,
       buttonStyleData: ButtonStyleData(
-        elevation: widget.elevation.toInt(),
+        elevation: widget.elevation.isFinite ? widget.elevation.toInt() : 0,
         overlayColor: overlayColor,
         padding: widget.margin,
       ),
@@ -297,7 +297,7 @@ class _FlutterFlowDropDownState<T> extends State<FlutterFlowDropDown<T>> {
         padding: EdgeInsets.zero,
       ),
       dropdownStyleData: DropdownStyleData(
-        elevation: widget.elevation.toInt(),
+        elevation: widget.elevation.isFinite ? widget.elevation.toInt() : 0,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(4.0),
           color: widget.fillColor,

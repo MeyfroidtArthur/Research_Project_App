@@ -85,7 +85,7 @@ class _MapWidgetState extends State<MapWidget> {
             now.difference(_lastCompassUpdate!).inMilliseconds > 100) {
           _lastCompassUpdate = now;
           setState(() {
-            currentHeading = event.heading!;
+            currentHeading = event.heading!.isFinite ? event.heading! : 0.0;
           });
         }
       }
@@ -289,6 +289,7 @@ class _MapWidgetState extends State<MapWidget> {
   }
 
   String _formatDuration(double seconds) {
+    if (!seconds.isFinite || seconds < 0) return '0 min';
     final minutes = (seconds / 60).round();
     if (minutes < 60) return '$minutes min';
     final hours = minutes ~/ 60;

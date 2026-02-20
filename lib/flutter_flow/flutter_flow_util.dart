@@ -171,12 +171,16 @@ T? castToType<T>(dynamic value) {
     case int:
       // Likewise, ints may be stored as doubles. If this is the case
       // (i.e. no decimal value), return the value as an int.
-      if (value is num && value.toInt() == value) {
+      if (value is num && value.isFinite && value.toInt() == value) {
         return value.toInt() as T;
       }
       break;
   }
-  return value as T;
+  try {
+    return value as T;
+  } catch (_) {
+    return null;
+  }
 }
 
 dynamic getJsonField(

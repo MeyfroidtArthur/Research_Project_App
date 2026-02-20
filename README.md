@@ -27,9 +27,19 @@ To ensure the project works correctly, the following services must be activated 
 2.  **Firestore Database**: Create a database in 'Production' or 'Test mode' and set the appropriate rules.
 3.  **Storage**: Activate Cloud Storage for storing files.
 
-Make sure to register an **Android app** and a **Web app** in your Firebase project settings to obtain the necessary configuration data.
+### 3. Firebase Rules Deployment
 
-### 3. Configuration & Secrets (Required)
+To apply the security rules defined in the project:
+
+1.  Install the [Firebase CLI](https://firebase.google.com/docs/cli).
+2.  Run `firebase login` and `firebase use <your-project-id>`.
+3.  Deploy the rules from the root directory:
+    `bash
+firebase deploy --only firestore:rules
+`
+    _Alternatively, you can manually copy the contents of `firebase/firestore.rules` into the "Rules" tab of the Firestore section in the Firebase Console._
+
+### 4. Configuration & Secrets (Required)
 
 The project requires several API keys and Firebase configurations that are **not** included in the source code for security reasons.
 
@@ -136,9 +146,19 @@ Om het project correct te laten werken, moeten de volgende services in de [Fireb
 2.  **Firestore Database**: Maak een database aan in 'Productie' of 'Test mode' en stel de juiste regels in.
 3.  **Storage**: Activeer Cloud Storage voor het opslaan van bestanden.
 
-Zorg ervoor dat je zowel een **Android-app** als een **Web-app** registreert in je Firebase project instellingen om de nodige configuratiegegevens te verkrijgen.
+### 3. Firebase Rules Deployment
 
-### 3. Configuratie & Secrets (Vereist)
+Om de beveiligingsregels die in het project zijn gedefinieerd toe te passen:
+
+1.  Installeer de [Firebase CLI](https://firebase.google.com/docs/cli).
+2.  Voer `firebase login` en `firebase use <jouw-project-id>` uit.
+3.  Implementeer de regels vanuit de hoofdmap:
+    `bash
+    firebase deploy --only firestore:rules
+    `
+    _Als alternatief kun je de inhoud van `firebase/firestore.rules` handmatig kopiëren naar het tabblad "Rules" in de Firestore-sectie van de Firebase Console._
+
+### 4. Configuratie & Secrets (Vereist)
 
 Het project vereist verschillende API-sleutels en Firebase-configuraties die om veiligheidsredenen **niet** in de broncode zijn opgenomen.
 
